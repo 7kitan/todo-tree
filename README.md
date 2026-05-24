@@ -27,13 +27,13 @@ shared/src/commonMain/kotlin/com/example/todo_tree/
 | Package | Version | Purpose | Docs |
 |---------|---------|---------|------|
 | compose.runtime | `^1.11.0` | Compose runtime (state, effects) | https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-multiplatform.html |
-| compose.foundation | `^1.11.0` | Layout, gestures, pointer input | https://developer.android.com/jetpack/compose/foundation |
-| compose.material3 | `^1.11.0-alpha07` | Material Design 3 components | https://developer.android.com/jetpack/compose/material3 |
-| compose.ui | `^1.11.0` | Graphics, input, modifiers | https://developer.android.com/jetpack/compose/ui |
+| compose.foundation | `^1.11.0` | Layout, gestures, pointer input | https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-multiplatform.html |
+| compose.material3 | `^1.11.0-alpha07` | Material Design 3 components | https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-multiplatform.html |
+| compose.ui | `^1.11.0` | Graphics, input, modifiers | https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-multiplatform.html |
 | compose.components.resources | `^1.11.0` | Font bundling via compose resources | https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-multiplatform-resources.html |
-| androidx.lifecycle.viewmodel-compose | `^2.11.0` | ViewModel in Compose | https://developer.android.com/jetpack/androidx/releases/lifecycle |
-| androidx.lifecycle.runtime-compose | `^2.11.0` | Lifecycle-aware coroutines | https://developer.android.com/jetpack/androidx/releases/lifecycle |
-| material-icons-core | `==1.7.3` | Check, expand/collapse icons | https://developer.android.com/jetpack/compose/material/icons |
+| androidx.lifecycle.viewmodel-compose | `^2.11.0` | ViewModel in Compose | https://github.com/JetBrains/compose-multiplatform-core |
+| androidx.lifecycle.runtime-compose | `^2.11.0` | Lifecycle-aware coroutines | https://github.com/JetBrains/compose-multiplatform-core |
+| material-icons-core | `==1.7.3` | Check, expand/collapse icons | https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-multiplatform.html |
 
 ## Running
 
