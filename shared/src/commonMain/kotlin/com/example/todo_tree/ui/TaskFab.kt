@@ -19,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.FloatingActionButton
@@ -39,6 +38,8 @@ import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
+// ==== Internal data ====
+
 private data class FabAction(
     val label: String,
     val icon: ImageVector,
@@ -52,7 +53,6 @@ fun TaskFab(
     onAddRoot: () -> Unit,
     onAddSubtask: () -> Unit,
     onToggleSearch: () -> Unit,
-    onEdit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -64,7 +64,6 @@ fun TaskFab(
             FabAction("Add root", Icons.Filled.Add) { onAddRoot() },
             FabAction("Add subtask", Icons.AutoMirrored.Filled.KeyboardArrowRight) { onAddSubtask() },
             FabAction("Search", Icons.Filled.Search) { onToggleSearch() },
-            FabAction("Edit", Icons.Filled.Create) { onEdit() },
             FabAction("Delete", Icons.Filled.Delete) { onDelete() },
         )
     }

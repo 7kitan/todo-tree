@@ -70,6 +70,8 @@ private val months = mapOf(
 
 private val monthDays = intArrayOf(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
+// ==== Calendar math ====
+
 private fun isLeapYear(y: Long) = (y % 4L == 0L && y % 100L != 0L) || (y % 400L == 0L)
 
 // Break epoch days into (year, month, day)
@@ -103,6 +105,8 @@ private fun nextDayMonth(day: Int, month: Int, todayStart: Long): Long? {
     if (day > nextMax) return null
     return ymdToEpochDays(year + 1, month, day) * dayMs
 }
+
+// ==== Date expression parsing ====
 
 private fun parseDateExpression(expr: String, todayStart: Long): Long? {
     val lower = expr.lowercase().trim()
@@ -201,6 +205,8 @@ private fun parseDateExpression(expr: String, todayStart: Long): Long? {
     return null
 }
 
+// ==== Full input parsing ====
+
 fun parseTaskInput(input: String): ParsedTaskInput {
     val trimmed = input.trim()
     if (trimmed.isBlank()) return ParsedTaskInput(trimmed)
@@ -289,6 +295,8 @@ fun parseTaskInput(input: String): ParsedTaskInput {
 
     return ParsedTaskInput(trimmed)
 }
+
+// ==== Live highlight support ====
 
 private val dateSuffixPatterns = listOf(
     Regex("""\s+(do|due)\s+(.+?)\s*$""", RegexOption.IGNORE_CASE),

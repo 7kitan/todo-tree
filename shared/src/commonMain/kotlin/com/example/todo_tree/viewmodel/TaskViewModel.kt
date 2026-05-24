@@ -36,6 +36,8 @@ class TaskViewModel : ViewModel() {
     fun outdent(taskId: String) { _forest.value = TaskTree.outdent(_forest.value, taskId) }
 }
 
+// ==== Sample data ====
+
 private val epochDay: Long get() = currentTimeMillis() / 86_400_000L
 
 private fun sampleForest(): List<TaskNode> {

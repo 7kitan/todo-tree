@@ -7,7 +7,7 @@ package com.example.todo_tree.model
 
 object TaskTree {
 
-    // ==== Mutations ====
+    // ==== Core mutations ====
 
     fun addTask(forest: List<TaskNode>, parentId: String, child: TaskNode): List<TaskNode> =
         mapForest(forest, parentId) { it.copy(subtasks = it.subtasks + child) }
@@ -23,7 +23,7 @@ object TaskTree {
         return consolidate(toggled)
     }
 
-    // ==== New mutations (reorder, bulk) ====
+    // ==== Reorder / bulk ====
 
     fun deleteCompleted(forest: List<TaskNode>): List<TaskNode> =
         forest.filterNot { it.isCompleted }.map { node ->

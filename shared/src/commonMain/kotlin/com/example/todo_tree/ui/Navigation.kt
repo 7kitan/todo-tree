@@ -15,6 +15,8 @@ import com.example.todo_tree.model.TaskNode
 
 data class VisibleItem(val id: String, val depth: Int)
 
+// ==== Tree flattening ====
+
 fun flattenVisible(forest: List<TaskNode>, expanded: Set<String>, searchQuery: String = ""): List<VisibleItem> {
     val query = searchQuery.lowercase().trim()
     val result = mutableListOf<VisibleItem>()
@@ -62,6 +64,8 @@ fun flattenVisible(forest: List<TaskNode>, expanded: Set<String>, searchQuery: S
     return result
 }
 
+// ==== Tree search helpers ====
+
 fun findTaskById(forest: List<TaskNode>, id: String): TaskNode? {
     for (node in forest) {
         if (node.id == id) return node
@@ -94,6 +98,8 @@ fun isDescendant(forest: List<TaskNode>, ancestorId: String, descendantId: Strin
     }
     return walk(ancestor.subtasks)
 }
+
+// ==== Keyboard dispatch ====
 
 fun handleKey(event: KeyEvent, onUp: () -> Unit, onDown: () -> Unit, onLeft: () -> Unit,
     onRight: () -> Unit, onToggleDone: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit,

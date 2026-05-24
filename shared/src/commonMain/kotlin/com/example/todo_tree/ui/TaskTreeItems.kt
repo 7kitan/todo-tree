@@ -46,6 +46,8 @@ val stripPalette = listOf(
     Color(0xFFCE9178), Color(0xFFC586C0), Color(0xFFD16969),
 )
 
+// ==== Task Row ====
+
 @Composable
 fun TaskRow(task: TaskNode, strips: List<Color>, hasChildren: Boolean, isExpanded: Boolean,
     isCursor: Boolean, alpha: Float, onToggle: () -> Unit, onToggleDone: () -> Unit, onEdit: () -> Unit) {
@@ -83,6 +85,8 @@ fun TaskRow(task: TaskNode, strips: List<Color>, hasChildren: Boolean, isExpande
         Spacer(Modifier.width(4.dp))
     }
 }
+
+// ==== Inline Edit Row ====
 
 @Composable
 fun EditingTaskRow(
@@ -163,6 +167,8 @@ fun EditingTaskRow(
     }
 }
 
+// ==== Today Bar ====
+
 @Composable
 fun TodayBar() {
     val now = currentTimeMillis()
@@ -183,6 +189,8 @@ fun TodayBar() {
         )
     }
 }
+
+// ==== Add / Search Input Row ====
 
 @Composable
 fun InputTaskRow(
