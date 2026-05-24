@@ -2,6 +2,8 @@
 
 > **AI-generated code notice:** This project was written with the assistance of a large language model (DeepSeek V4 Flash).
 
+![App screenshot](screenshots/Screenshot_20260524_140227.png)
+
 Task manager with infinite nested subtrees, keyboard-first navigation, and due-date constraints.
 
 ## Project Structure
