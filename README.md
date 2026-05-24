@@ -1,6 +1,8 @@
 # todo-tree
 
-Task manager with infinite nested subtrees, keyboard-first navigation, and due-date constraints. Written by [DeepSeek V4 Flash](https://chat.opencode.ai).
+> **AI-generated code notice:** This project was written with the assistance of a large language model (DeepSeek V4 Flash).
+
+Task manager with infinite nested subtrees, keyboard-first navigation, and due-date constraints.
 
 ## Project Structure
 
@@ -22,16 +24,16 @@ shared/src/commonMain/kotlin/com/example/todo_tree/
 
 ## Dependencies
 
-| Package | Purpose |
-|---------|---------|
-| `compose.runtime` | Compose runtime (state, effects) |
-| `compose.foundation` | Layout, gestures, pointer input |
-| `compose.material3` | Material Design 3 components |
-| `compose.ui` | Graphics, input, modifiers |
-| `compose.components.resources` | Font bundling via compose resources |
-| `androidx.lifecycle.viewmodel-compose` | ViewModel in Compose |
-| `androidx.lifecycle.runtime-compose` | Lifecycle-aware coroutines |
-| `material-icons-core:1.7.3` | Check, expand/collapse icons |
+| Package | Version | Purpose | Docs |
+|---------|---------|---------|------|
+| compose.runtime | `^1.11.0` | Compose runtime (state, effects) | https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-multiplatform.html |
+| compose.foundation | `^1.11.0` | Layout, gestures, pointer input | https://developer.android.com/jetpack/compose/foundation |
+| compose.material3 | `^1.11.0-alpha07` | Material Design 3 components | https://developer.android.com/jetpack/compose/material3 |
+| compose.ui | `^1.11.0` | Graphics, input, modifiers | https://developer.android.com/jetpack/compose/ui |
+| compose.components.resources | `^1.11.0` | Font bundling via compose resources | https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-multiplatform-resources.html |
+| androidx.lifecycle.viewmodel-compose | `^2.11.0` | ViewModel in Compose | https://developer.android.com/jetpack/androidx/releases/lifecycle |
+| androidx.lifecycle.runtime-compose | `^2.11.0` | Lifecycle-aware coroutines | https://developer.android.com/jetpack/androidx/releases/lifecycle |
+| material-icons-core | `==1.7.3` | Check, expand/collapse icons | https://developer.android.com/jetpack/compose/material/icons |
 
 ## Running
 
