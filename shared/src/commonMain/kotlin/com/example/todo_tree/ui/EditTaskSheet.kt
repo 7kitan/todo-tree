@@ -53,7 +53,7 @@ fun EditTaskSheet(task: TaskNode, onDismiss: () -> Unit, onSave: (String, Long?,
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun datePicker(initial: Long?, onConfirm: (Long?) -> Unit, onDismiss: () -> Unit) {
+internal fun datePicker(initial: Long?, onConfirm: (Long?) -> Unit, onDismiss: () -> Unit) {
     val state = rememberDatePickerState(initialSelectedDateMillis = initial)
     AlertDialog(onDismissRequest = onDismiss, confirmButton = { TextButton(onClick = { onConfirm(state.selectedDateMillis); onDismiss() }) { Text("OK") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }, text = { DatePicker(state = state) })
@@ -63,7 +63,15 @@ fun relativeDate(epochMillis: Long): String {
     val today = currentTimeMillis() / 86_400_000L
     val target = epochMillis / 86_400_000L
     val days = (target - today).toInt()
-    return when { days < 0 -> "Overdue"; days == 0 -> "Today"; days == 1 -> "Tomorrow"; else -> "in $days days" }
+    val dayNames = arrayOf("Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed")
+    return when {
+        days < 0 -> "Overdue"
+        days == 0 -> "Today"
+        days == 1 -> "Tomorrow"
+        days in 2..6 -> "this ${dayNames[(target % 7).toInt()]}"
+        days in 7..13 -> "next ${dayNames[(target % 7).toInt()]}"
+        else -> formatDate(epochMillis)
+    }
 }
 
 fun formatDate(epochMillis: Long): String {
@@ -71,7 +79,7 @@ fun formatDate(epochMillis: Long): String {
     while (true) { val d = if (isLeap(y)) 366L else 365L; if (r < d) break; r -= d; y++ }
     val md = if (isLeap(y)) intArrayOf(31,29,31,30,31,30,31,31,30,31,30,31) else intArrayOf(31,28,31,30,31,30,31,31,30,31,30,31)
     var m = 1; for (dm in md) { if (r < dm) break; r -= dm; m++ }
-    return "$y-${m.toString().padStart(2,'0')}-${(r+1).toString().padStart(2,'0')}"
+    return "${m.toString().padStart(2,'0')}-${(r+1).toString().padStart(2,'0')}"
 }
 
 private fun isLeap(y: Long) = (y % 4L == 0L && y % 100L != 0L) || (y % 400L == 0L)

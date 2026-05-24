@@ -15,12 +15,47 @@ import com.example.todo_tree.model.TaskNode
 
 data class VisibleItem(val id: String, val depth: Int)
 
-fun flattenVisible(forest: List<TaskNode>, expanded: Set<String>): List<VisibleItem> {
+fun flattenVisible(forest: List<TaskNode>, expanded: Set<String>, searchQuery: String = ""): List<VisibleItem> {
+    val query = searchQuery.lowercase().trim()
     val result = mutableListOf<VisibleItem>()
+
+    if (query.isEmpty()) {
+        fun walk(nodes: List<TaskNode>, depth: Int) {
+            for (node in nodes) {
+                result.add(VisibleItem(node.id, depth))
+                if (node.id in expanded) walk(node.subtasks, depth + 1)
+            }
+        }
+        walk(forest, 0)
+        return result
+    }
+
+    val matchIds = mutableSetOf<String>()
+    fun collectMatches(nodes: List<TaskNode>) {
+        for (node in nodes) {
+            if (node.title.lowercase().contains(query)) matchIds.add(node.id)
+            collectMatches(node.subtasks)
+        }
+    }
+    collectMatches(forest)
+
+    val ancestorIds = mutableSetOf<String>()
+    for (id in matchIds) {
+        var current = id
+        while (true) {
+            val p = findParent(forest, current) ?: break
+            ancestorIds.add(p.id)
+            current = p.id
+        }
+    }
+
     fun walk(nodes: List<TaskNode>, depth: Int) {
         for (node in nodes) {
-            result.add(VisibleItem(node.id, depth))
-            if (node.id in expanded) walk(node.subtasks, depth + 1)
+            val show = node.id in matchIds || node.id in ancestorIds
+            if (show) {
+                result.add(VisibleItem(node.id, depth))
+                walk(node.subtasks, depth + 1)
+            }
         }
     }
     walk(forest, 0)

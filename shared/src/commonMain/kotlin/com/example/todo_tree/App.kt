@@ -28,7 +28,12 @@ fun App() {
     MaterialTheme(typography = Typography(
         bodyLarge = TextStyle(fontFamily = FontFamily(Font(Res.font.ibm_plex_mono_regular, FontWeight.Normal), Font(Res.font.ibm_plex_mono_bold, FontWeight.Bold), Font(Res.font.ibm_plex_mono_italic, FontWeight.Normal)), fontSize = 15.sp),
         bodyMedium = TextStyle(fontFamily = FontFamily(Font(Res.font.ibm_plex_mono_regular)), fontSize = 14.sp),
+        bodySmall = TextStyle(fontFamily = FontFamily(Font(Res.font.ibm_plex_mono_regular)), fontSize = 12.sp),
+        labelLarge = TextStyle(fontFamily = FontFamily(Font(Res.font.ibm_plex_mono_regular)), fontSize = 14.sp),
         labelSmall = TextStyle(fontFamily = FontFamily(Font(Res.font.ibm_plex_mono_regular)), fontSize = 12.sp),
+        titleLarge = TextStyle(fontFamily = FontFamily(Font(Res.font.ibm_plex_mono_regular, FontWeight.Bold)), fontSize = 18.sp),
+        titleMedium = TextStyle(fontFamily = FontFamily(Font(Res.font.ibm_plex_mono_regular)), fontSize = 16.sp),
+        titleSmall = TextStyle(fontFamily = FontFamily(Font(Res.font.ibm_plex_mono_regular)), fontSize = 14.sp),
     )) {
         TaskTreeScreen(viewModel = viewModel { TaskViewModel() }, modifier = Modifier.fillMaxSize())
     }

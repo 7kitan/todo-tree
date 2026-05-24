@@ -1,0 +1,326 @@
+// =============================================================================
+//  DATE_PARSER.KT
+//  Natural-language date parsing (Todoist-style) for task input.
+// =============================================================================
+
+package com.example.todo_tree.ui
+
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
+import com.example.todo_tree.currentTimeMillis
+
+data class ParsedTaskInput(
+    val title: String,
+    val doDate: Long? = null,
+    val dueDate: Long? = null,
+)
+
+private val dayMs = 86_400_000L
+private val epochDays: Long get() = currentTimeMillis() / dayMs
+
+private val dow: Int get() = (epochDays % 7).toInt()
+
+private fun dayOfWeek(): Int = when (dow) {
+    4 -> 1  // Mon
+    5 -> 2  // Tue
+    6 -> 3  // Wed
+    0 -> 4  // Thu
+    1 -> 5  // Fri
+    2 -> 6  // Sat
+    3 -> 7  // Sun
+    else -> 0
+}
+
+private val weekdays = mapOf(
+    "monday" to 1, "mon" to 1,
+    "tuesday" to 2, "tue" to 2,
+    "wednesday" to 3, "wed" to 3,
+    "thursday" to 4, "thu" to 4,
+    "friday" to 5, "fri" to 5,
+    "saturday" to 6, "sat" to 6,
+    "sunday" to 7, "sun" to 7,
+)
+
+private val monthNames = listOf(
+    "january", "jan", "february", "feb", "march", "mar",
+    "april", "apr", "may", "june", "jun", "july", "jul",
+    "august", "aug", "september", "sep", "sept", "october", "oct",
+    "november", "nov", "december", "dec",
+)
+
+private val months = mapOf(
+    "january" to 1, "jan" to 1,
+    "february" to 2, "feb" to 2,
+    "march" to 3, "mar" to 3,
+    "april" to 4, "apr" to 4,
+    "may" to 5,
+    "june" to 6, "jun" to 6,
+    "july" to 7, "jul" to 7,
+    "august" to 8, "aug" to 8,
+    "september" to 9, "sep" to 9, "sept" to 9,
+    "october" to 10, "oct" to 10,
+    "november" to 11, "nov" to 11,
+    "december" to 12, "dec" to 12,
+)
+
+private val monthDays = intArrayOf(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+
+private fun isLeapYear(y: Long) = (y % 4L == 0L && y % 100L != 0L) || (y % 400L == 0L)
+
+// Break epoch days into (year, month, day)
+private fun epochToYmd(days: Long): Triple<Long, Int, Int> {
+    var y = 1970L; var r = days
+    while (true) { val d = if (isLeapYear(y)) 366L else 365L; if (r < d) break; r -= d; y++ }
+    val md = if (isLeapYear(y)) intArrayOf(31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31) else monthDays
+    var m = 1; for (dm in md) { if (r < dm) break; r -= dm; m++ }
+    return Triple(y, m, (r + 1).toInt())
+}
+
+private fun ymdToEpochDays(year: Long, month: Int, day: Int): Long {
+    var total = 0L
+    for (y in 1970L until year) total += if (isLeapYear(y)) 366L else 365L
+    val md = if (isLeapYear(year)) intArrayOf(31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31) else monthDays
+    for (m in 0 until month - 1) total += md[m]
+    return total + day - 1
+}
+
+private fun nextDayMonth(day: Int, month: Int, todayStart: Long): Long? {
+    if (day < 1 || day > 31 || month < 1 || month > 12) return null
+    val (year, curMonth, curDay) = epochToYmd(epochDays)
+    val maxDay = if (month == 2 && isLeapYear(year)) 29 else monthDays[month - 1]
+    if (day > maxDay) return null
+    // Try current year
+    if (month > curMonth || (month == curMonth && day >= curDay)) {
+        return ymdToEpochDays(year, month, day) * dayMs
+    }
+    // Next year
+    val nextMax = if (month == 2 && isLeapYear(year + 1)) 29 else monthDays[month - 1]
+    if (day > nextMax) return null
+    return ymdToEpochDays(year + 1, month, day) * dayMs
+}
+
+private fun parseDateExpression(expr: String, todayStart: Long): Long? {
+    val lower = expr.lowercase().trim()
+
+    when (lower) {
+        "today", "t" -> return todayStart
+        "tomorrow", "tmr", "tmrw" -> return todayStart + dayMs
+        "next week", "nxt" -> return todayStart + 7 * dayMs
+        "next month" -> return todayStart + 30 * dayMs
+        "next year" -> return todayStart + 365 * dayMs
+    }
+
+    // "next monday" ... "next sunday", also "nxt monday" ... "nxt sunday"
+    val nextDay = Regex("""(?:next|nxt)\s+(\w+)""", RegexOption.IGNORE_CASE).matchEntire(lower)
+    if (nextDay != null) {
+        val day = weekdays[nextDay.groupValues[1].lowercase()]
+        if (day != null) {
+            var diff = day - dayOfWeek()
+            if (diff <= 0) diff += 7
+            return todayStart + diff * dayMs
+        }
+        return null
+    }
+
+    // Bare weekday: "monday", "mon", ...
+    val bare = weekdays[lower]
+    if (bare != null) {
+        var diff = bare - dayOfWeek()
+        if (diff <= 0) diff += 7
+        return todayStart + diff * dayMs
+    }
+
+    // "in X days/weeks/months"
+    val inExpr = Regex("""in\s+(\d+)\s+(day|week|month)s?""", RegexOption.IGNORE_CASE).matchEntire(lower)
+    if (inExpr != null) {
+        val num = inExpr.groupValues[1].toIntOrNull() ?: return null
+        val mult = when (inExpr.groupValues[2].lowercase()) {
+            "day" -> 1
+            "week" -> 7
+            "month" -> 30
+            else -> return null
+        }
+        return todayStart + num * mult * dayMs
+    }
+
+    // Shorthand: Xd, +Xd, Xw, +Xw, Xm, +Xm
+    val shortIn = Regex("""\+?(\d+)([dwm])(?:ays?|eeks?|onths?)?""", RegexOption.IGNORE_CASE).matchEntire(lower)
+    if (shortIn != null) {
+        val num = shortIn.groupValues[1].toIntOrNull() ?: return null
+        val mult = when (shortIn.groupValues[2].lowercase()) {
+            "d" -> 1
+            "w" -> 7
+            "m" -> 30
+            else -> return null
+        }
+        return todayStart + num * mult * dayMs
+    }
+
+    // Ordinal day: "27th" → next 27th of month
+    val ordMatch = Regex("""(\d+)(?:st|nd|rd|th)?""", RegexOption.IGNORE_CASE).matchEntire(lower)
+    if (ordMatch != null) {
+        val day = ordMatch.groupValues[1].toIntOrNull()
+        if (day != null && day in 1..31) {
+            val (_, curMonth, curDay) = epochToYmd(epochDays)
+            return nextDayMonth(day, curMonth, todayStart)
+        }
+    }
+
+    // "next 27th" → 27th of next month
+    val nextOrd = Regex("""(?:next|nxt)\s+(\d+)(?:st|nd|rd|th)?""", RegexOption.IGNORE_CASE).matchEntire(lower)
+    if (nextOrd != null) {
+        val day = nextOrd.groupValues[1].toIntOrNull()
+        if (day != null && day in 1..31) {
+            val (_, curMonth, _) = epochToYmd(epochDays)
+            val nextMonth = if (curMonth == 12) 1 else curMonth + 1
+            val nextYear = if (curMonth == 12) epochToYmd(epochDays).first + 1 else epochToYmd(epochDays).first
+            val maxDay = if (nextMonth == 2 && isLeapYear(nextYear)) 29 else monthDays[nextMonth - 1]
+            if (day <= maxDay) return ymdToEpochDays(nextYear, nextMonth, day) * dayMs
+        }
+    }
+
+    // Month + day: "may 27" or "27 may"
+    val monthDay = Regex("""(${monthNames.joinToString("|")})\s+(\d+)(?:st|nd|rd|th)?""", RegexOption.IGNORE_CASE).matchEntire(lower)
+    if (monthDay != null) {
+        val month = months[monthDay.groupValues[1].lowercase()]
+        val day = monthDay.groupValues[2].toIntOrNull()
+        if (month != null && day != null) return nextDayMonth(day, month, todayStart)
+    }
+    val dayMonth = Regex("""(\d+)(?:st|nd|rd|th)?\s+(${monthNames.joinToString("|")})""", RegexOption.IGNORE_CASE).matchEntire(lower)
+    if (dayMonth != null) {
+        val day = dayMonth.groupValues[1].toIntOrNull()
+        val month = months[dayMonth.groupValues[2].lowercase()]
+        if (month != null && day != null) return nextDayMonth(day, month, todayStart)
+    }
+
+    return null
+}
+
+fun parseTaskInput(input: String): ParsedTaskInput {
+    val trimmed = input.trim()
+    if (trimmed.isBlank()) return ParsedTaskInput(trimmed)
+
+    val todayStart = epochDays * dayMs
+
+    // "text do <expr>" → set doDate
+    val doMatch = Regex("""^(.+?)\s+do\s+(.+)$""", RegexOption.IGNORE_CASE).matchEntire(trimmed)
+    if (doMatch != null) {
+        val title = doMatch.groupValues[1].trim()
+        val dateExpr = doMatch.groupValues[2].trim()
+        val date = parseDateExpression(dateExpr, todayStart)
+        if (date != null) return ParsedTaskInput(title, doDate = date)
+    }
+
+    // "text due <expr>" → set dueDate
+    val dueMatch = Regex("""^(.+?)\s+due\s+(.+)$""", RegexOption.IGNORE_CASE).matchEntire(trimmed)
+    if (dueMatch != null) {
+        val title = dueMatch.groupValues[1].trim()
+        val dateExpr = dueMatch.groupValues[2].trim()
+        val date = parseDateExpression(dateExpr, todayStart)
+        if (date != null) return ParsedTaskInput(title, dueDate = date)
+    }
+
+    // Try matching full-word expressions at the end
+    val wordEnd = Regex(
+        """^(.+?)\s+(today|tomorrow|next\s+\w+|in\s+\d+\s+\w+|mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)$""",
+        RegexOption.IGNORE_CASE,
+    ).find(trimmed)
+    if (wordEnd != null) {
+        val date = parseDateExpression(wordEnd.groupValues[2].trim(), todayStart)
+        if (date != null) return ParsedTaskInput(wordEnd.groupValues[1].trim(), doDate = date)
+    }
+
+    // Try shorthand at the end
+    val shortEnd = Regex(
+        """^(.+?)\s+(t(?:oday)?|tmr?w?|nxt(?:\s+\w+)?|\+?\d+[dwm](?:ays?|eeks?|onths?)?)$""",
+        RegexOption.IGNORE_CASE,
+    ).find(trimmed)
+    if (shortEnd != null) {
+        val date = parseDateExpression(shortEnd.groupValues[2].trim(), todayStart)
+        if (date != null) return ParsedTaskInput(shortEnd.groupValues[1].trim(), doDate = date)
+    }
+
+    // Try ordinal day at the end: "meeting 27th", "meeting 27"
+    val ordEnd = Regex(
+        """^(.+?)\s+(\d+)(?:st|nd|rd|th)?$""",
+        RegexOption.IGNORE_CASE,
+    ).find(trimmed)
+    if (ordEnd != null) {
+        val day = ordEnd.groupValues[2].toIntOrNull()
+        if (day != null && day in 1..31) {
+            val (_, curMonth, curDay) = epochToYmd(epochDays)
+            val date = nextDayMonth(day, curMonth, todayStart)
+            if (date != null) return ParsedTaskInput(ordEnd.groupValues[1].trim(), doDate = date)
+        }
+    }
+
+    // Try "text <month> <day>" at the end
+    val monthDayEnd = Regex(
+        """^(.+?)\s+(${monthNames.joinToString("|")})\s+(\d+)(?:st|nd|rd|th)?$""",
+        RegexOption.IGNORE_CASE,
+    ).find(trimmed)
+    if (monthDayEnd != null) {
+        val month = months[monthDayEnd.groupValues[2].lowercase()]
+        val day = monthDayEnd.groupValues[3].toIntOrNull()
+        if (month != null && day != null) {
+            val date = nextDayMonth(day, month, todayStart)
+            if (date != null) return ParsedTaskInput(monthDayEnd.groupValues[1].trim(), doDate = date)
+        }
+    }
+
+    // Try "text <day> <month>" at the end
+    val dayMonthEnd = Regex(
+        """^(.+?)\s+(\d+)(?:st|nd|rd|th)?\s+(${monthNames.joinToString("|")})$""",
+        RegexOption.IGNORE_CASE,
+    ).find(trimmed)
+    if (dayMonthEnd != null) {
+        val day = dayMonthEnd.groupValues[2].toIntOrNull()
+        val month = months[dayMonthEnd.groupValues[3].lowercase()]
+        if (month != null && day != null) {
+            val date = nextDayMonth(day, month, todayStart)
+            if (date != null) return ParsedTaskInput(dayMonthEnd.groupValues[1].trim(), doDate = date)
+        }
+    }
+
+    return ParsedTaskInput(trimmed)
+}
+
+private val dateSuffixPatterns = listOf(
+    Regex("""\s+(do|due)\s+(.+?)\s*$""", RegexOption.IGNORE_CASE),
+    Regex("""\s+(today|tomorrow|next\s+\w+|mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\s*$""", RegexOption.IGNORE_CASE),
+    Regex("""\s+(t(?:oday)?|tmr?w?|nxt(?:\s+\w+)?|\+?\d+[dwm](?:ays?|eeks?|onths?)?)\s*$""", RegexOption.IGNORE_CASE),
+    Regex("""\s+\d+(?:st|nd|rd|th)?\s*$"""),
+    Regex("""\s+(${monthNames.joinToString("|")})\s+\d+(?:st|nd|rd|th)?\s*$""", RegexOption.IGNORE_CASE),
+    Regex("""\s+\d+(?:st|nd|rd|th)?\s+(${monthNames.joinToString("|")})\s*$""", RegexOption.IGNORE_CASE),
+)
+
+fun findDateSuffix(text: String): IntRange? {
+    val t = text.trimEnd()
+    if (t.isEmpty()) return null
+    val offset = text.length - t.length
+    for (pattern in dateSuffixPatterns) {
+        val m = pattern.find(t) ?: continue
+        return (offset + m.range.first)..(offset + m.range.last)
+    }
+    return null
+}
+
+private val dateHighlightColor = Color(0xFF569CD6)
+
+fun dateHighlightTransformation(): VisualTransformation = VisualTransformation { text ->
+    val range = findDateSuffix(text.text)
+    if (range != null) {
+        val annotated = buildAnnotatedString {
+            append(text.text)
+            addStyle(SpanStyle(color = dateHighlightColor), range.first, range.last + 1)
+        }
+        TransformedText(annotated, OffsetMapping.Identity)
+    } else {
+        TransformedText(text, OffsetMapping.Identity)
+    }
+}

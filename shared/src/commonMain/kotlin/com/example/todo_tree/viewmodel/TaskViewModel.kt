@@ -17,13 +17,23 @@ class TaskViewModel : ViewModel() {
     private val _forest = MutableStateFlow(sampleForest())
     val forest: StateFlow<List<TaskNode>> = _forest.asStateFlow()
 
-    fun addRootTask(title: String) { if (title.isBlank()) return; _forest.value = _forest.value + TaskNode(title = title.trim()) }
-    fun addSubtask(parentId: String, title: String) { if (title.isBlank()) return; _forest.value = TaskTree.addTask(_forest.value, parentId, TaskNode(title = title.trim())) }
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    fun setSearchQuery(query: String) { _searchQuery.value = query }
+
+    fun addRootTask(title: String, doDate: Long? = null, dueDate: Long? = null) { if (title.isBlank()) return; _forest.value = _forest.value + TaskNode(title = title.trim(), doDate = doDate, dueDate = dueDate) }
+    fun addSubtask(parentId: String, title: String, doDate: Long? = null, dueDate: Long? = null) { if (title.isBlank()) return; _forest.value = TaskTree.addTask(_forest.value, parentId, TaskNode(title = title.trim(), doDate = doDate, dueDate = dueDate)) }
     fun removeTask(taskId: String) { _forest.value = TaskTree.removeTask(_forest.value, taskId) }
     fun toggleCompleted(taskId: String) { _forest.value = TaskTree.toggleCompleted(_forest.value, taskId) }
     fun updateTask(taskId: String, title: String, doDate: Long?, dueDate: Long?) {
         _forest.value = TaskTree.updateTask(_forest.value, taskId) { it.copy(title = title, doDate = doDate, dueDate = dueDate) }
     }
+    fun deleteCompleted() { _forest.value = TaskTree.deleteCompleted(_forest.value) }
+    fun moveUp(taskId: String) { _forest.value = TaskTree.moveUp(_forest.value, taskId) }
+    fun moveDown(taskId: String) { _forest.value = TaskTree.moveDown(_forest.value, taskId) }
+    fun indent(taskId: String) { _forest.value = TaskTree.indent(_forest.value, taskId) }
+    fun outdent(taskId: String) { _forest.value = TaskTree.outdent(_forest.value, taskId) }
 }
 
 private val epochDay: Long get() = currentTimeMillis() / 86_400_000L
