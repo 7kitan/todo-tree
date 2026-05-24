@@ -2,7 +2,10 @@
 
 > **AI-generated code notice:** This project was written with the assistance of a large language model (DeepSeek V4 Flash).
 
-<img src="screenshots/Screenshot_20260524_140227.png" alt="App screenshot" width="250"/>
+<p>
+  <img src="screenshots/SCR-20260525-bekm.png" alt="Mobile screenshot" height="600"/>
+  <img src="screenshots/SCR-20260525-beto.png" alt="Desktop screenshot" height="600"/>
+</p>
 
 Task manager with infinite nested subtrees, keyboard-first navigation, NLP date parsing, `#` command syntax, swipe actions, and Inbox-centric organization.
 
