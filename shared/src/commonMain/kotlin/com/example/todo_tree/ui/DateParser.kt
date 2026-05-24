@@ -22,6 +22,7 @@ data class ParsedTaskInput(
     val dueDate: Long? = null,
     val item: Item = Item.Task(),
     val parentRef: String? = null,
+    val removeCatTitle: String? = null,
 )
 
 private val dayMs = 86_400_000L
@@ -202,12 +203,13 @@ private fun parseDateExpression(expr: String, todayStart: Long): Long? {
 
 // ==== #token scanning ====
 
-private data class HashScan(val stripped: String, val item: Item, val parentRef: String?)
+private data class HashScan(val stripped: String, val item: Item, val parentRef: String?, val removeCatTitle: String?)
 
 private fun scanHashTokens(input: String): HashScan {
     var text = input
     var item: Item = Item.Task()
     var parentRef: String? = null
+    var removeCatTitle: String? = null
     val hashPattern = Regex("""(?:^|\s+)#(\w+)""")
     while (true) {
         val m = hashPattern.find(text) ?: break
@@ -215,12 +217,13 @@ private fun scanHashTokens(input: String): HashScan {
         when (token) {
             "category", "cat" -> item = Item.Category
             "project", "proj" -> item = Item.Project()
+            "removecat", "rmcat" -> removeCatTitle = text.removeRange(m.range).trim()
             else -> if (parentRef == null) parentRef = m.groupValues[1]
         }
         text = text.removeRange(m.range)
         text = text.trim()
     }
-    return HashScan(text, item, parentRef)
+    return HashScan(text, item, parentRef, removeCatTitle)
 }
 
 // ==== Full input parsing ====
@@ -231,6 +234,7 @@ fun parseTaskInput(input: String): ParsedTaskInput {
 
     val scanned = scanHashTokens(trimmed)
     val text = scanned.stripped
+    if (scanned.removeCatTitle != null) return ParsedTaskInput("", removeCatTitle = scanned.removeCatTitle)
     if (text.isBlank()) return ParsedTaskInput(text, item = scanned.item, parentRef = scanned.parentRef)
 
     val todayStart = epochDays * dayMs

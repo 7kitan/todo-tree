@@ -16,6 +16,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
@@ -49,7 +50,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
     // ==== State ====
 
     val forest by viewModel.forest.collectAsState()
-    var expanded by remember { mutableStateOf(setOf<String>()) }
+    var expanded by remember { mutableStateOf(setOf("__inbox__")) }
     var inputMode by remember { mutableStateOf<String?>(null) } // "add" | "search" | null
     var inputText by remember { mutableStateOf("") }
     val effectiveQuery = remember(inputMode, inputText) { if (inputMode == "search") inputText else "" }
@@ -278,7 +279,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
             }
         }
 
-        // ==== Overlay: today bar / input row ====
+        // ==== Overlay: today bar / input row + fuzzy dropdown ====
 
         Box(
             modifier = Modifier
@@ -286,44 +287,85 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                 .offset { IntOffset(0, (screenHeight * 0.25f).roundToInt()) }
                 .then(if (inputMode != null) Modifier.focusRequester(focusRequester) else Modifier),
         ) {
-            if (inputMode != null) {
-                val d = visibleOrder.find { it.id == cursorId }?.depth ?: 0
-                InputTaskRow(
-                    text = inputText,
-                    onTextChange = { inputText = it },
-                    visualTransformation = dateHighlightTransformation(),
-                    onDone = {
-                        if (inputText.isNotBlank()) {
-                            val p = parseTaskInput(inputText)
-                            val finalItem = when {
-                                p.item is Item.Category -> Item.Category
-                                p.item is Item.Project -> Item.Project(dueDate = p.dueDate)
-                                else -> Item.Task(doDate = p.doDate, dueDate = p.dueDate)
+            Column {
+                if (inputMode != null) {
+                    val d = visibleOrder.find { it.id == cursorId }?.depth ?: 0
+                    InputTaskRow(
+                        text = inputText,
+                        onTextChange = { inputText = it },
+                        visualTransformation = dateHighlightTransformation(),
+                        onDone = {
+                            if (inputText.isNotBlank()) {
+                                val p = parseTaskInput(inputText)
+                                if (p.removeCatTitle != null) {
+                                    val name = p.removeCatTitle
+                                    val cat = findTaskByTitle(forest, name)
+                                        ?: findTasksByTitleFuzzy(forest, name, 2).singleOrNull()
+                                    if (cat != null) deleteTargetId = cat.id
+                                    inputMode = null; inputText = ""
+                                } else {
+                                    val finalItem = when {
+                                        p.item is Item.Category -> Item.Category
+                                        p.item is Item.Project -> Item.Project(dueDate = p.dueDate)
+                                        else -> Item.Task(doDate = p.doDate, dueDate = p.dueDate)
+                                    }
+                                    val newId = if (p.parentRef != null) {
+                                        findTaskByTitle(forest, p.parentRef)?.let { parent ->
+                                            expanded = expanded + parent.id
+                                            viewModel.addSubtask(parent.id, p.title, finalItem)
+                                        } ?: run { expanded = expanded + "__inbox__"; viewModel.addInboxChild(p.title, finalItem) }
+                                    } else if (cursorId != null) {
+                                        expanded = expanded + cursorId
+                                        viewModel.addSubtask(cursorId, p.title, finalItem)
+                                    } else {
+                                        expanded = expanded + "__inbox__"
+                                        viewModel.addInboxChild(p.title, finalItem)
+                                    }
+                                    inputMode = null; inputText = ""
+                                    pendingFocusId = newId
+                                }
                             }
-                            val newId = if (p.parentRef != null) {
-                                findTaskByTitle(forest, p.parentRef)?.let { parent ->
-                                    expanded = expanded + parent.id
-                                    viewModel.addSubtask(parent.id, p.title, finalItem)
-                                } ?: viewModel.addRootTask(p.title, finalItem)
-                            } else if (cursorId != null) {
-                                expanded = expanded + cursorId
-                                viewModel.addSubtask(cursorId, p.title, finalItem)
-                            } else {
-                                viewModel.addRootTask(p.title, finalItem)
+                        },
+                        onClose = { inputMode = null; inputText = "" },
+                        depth = if (cursorId != null) (visibleOrder.find { it.id == cursorId }?.depth ?: 0) + 1 else 0,
+                        mode = when (inputMode) {
+                            "search" -> "search"
+                            else -> if (cursorId != null) "addSubtask" else "addRoot"
+                        },
+                    )
+                } else {
+                    TodayBar(onSearchClick = { inputMode = "search"; inputText = "" })
+                }
+
+                // ==== Fuzzy dropdown for #removecat ====
+
+                val catMatches = remember(inputText, forest) {
+                    val p = parseTaskInput(inputText)
+                    val q = p.removeCatTitle
+                    if (q.isNullOrBlank()) emptyList()
+                    else findTasksByTitleFuzzy(forest, q, 5).filter { it.item is Item.Category && it.id != "__inbox__" }
+                }
+                if (catMatches.isNotEmpty()) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shadowElevation = 4.dp,
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                    ) {
+                        Column {
+                            catMatches.forEach { match ->
+                                Text(
+                                    text = match.title,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { inputText = "#removecat ${match.title}" }
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
                             }
-                            inputMode = null; inputText = ""
-                            pendingFocusId = newId
                         }
-                    },
-                    onClose = { inputMode = null; inputText = "" },
-                    depth = if (cursorId != null) (visibleOrder.find { it.id == cursorId }?.depth ?: 0) + 1 else 0,
-                    mode = when (inputMode) {
-                        "search" -> "search"
-                        else -> if (cursorId != null) "addSubtask" else "addRoot"
-                    },
-                )
-            } else {
-                TodayBar(onSearchClick = { inputMode = "search"; inputText = "" })
+                    }
+                }
             }
         }
 

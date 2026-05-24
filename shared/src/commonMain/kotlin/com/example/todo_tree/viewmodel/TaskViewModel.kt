@@ -24,18 +24,22 @@ class TaskViewModel : ViewModel() {
 
     fun setSearchQuery(query: String) { _searchQuery.value = query }
 
+    private val __inbox__ = "__inbox__"
+
     fun addRootTask(title: String, item: Item = Item.Task()): String? { if (title.isBlank()) return null; val node = ItemNode(title = title.trim(), item = item); _forest.value = _forest.value + node; return node.id }
+    fun addInboxChild(title: String, item: Item = Item.Task()): String? = addSubtask(__inbox__, title, item)
     fun addSubtask(parentId: String, title: String, item: Item = Item.Task()): String? { if (title.isBlank()) return null; val node = ItemNode(title = title.trim(), item = item); _forest.value = TaskTree.addTask(_forest.value, parentId, node); return node.id }
-    fun removeTask(taskId: String) { _forest.value = TaskTree.removeTask(_forest.value, taskId) }
-    fun toggleCompleted(taskId: String) { _forest.value = TaskTree.toggleCompleted(_forest.value, taskId) }
+    fun removeTask(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.removeTask(_forest.value, taskId) }
+    fun toggleCompleted(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.toggleCompleted(_forest.value, taskId) }
     fun updateTask(taskId: String, title: String, item: Item) {
+        if (taskId == __inbox__) return
         _forest.value = TaskTree.updateTask(_forest.value, taskId) { it.copy(title = title.trim(), item = item) }
     }
     fun deleteCompleted() { _forest.value = TaskTree.deleteCompleted(_forest.value) }
-    fun moveUp(taskId: String) { _forest.value = TaskTree.moveUp(_forest.value, taskId) }
-    fun moveDown(taskId: String) { _forest.value = TaskTree.moveDown(_forest.value, taskId) }
-    fun indent(taskId: String) { _forest.value = TaskTree.indent(_forest.value, taskId) }
-    fun outdent(taskId: String) { _forest.value = TaskTree.outdent(_forest.value, taskId) }
+    fun moveUp(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.moveUp(_forest.value, taskId) }
+    fun moveDown(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.moveDown(_forest.value, taskId) }
+    fun indent(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.indent(_forest.value, taskId) }
+    fun outdent(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.outdent(_forest.value, taskId) }
 }
 
 // ==== Sample data ====
@@ -62,9 +66,11 @@ private fun sampleForest(): List<ItemNode> {
         ItemNode(title = title, item = Item.Project(dueDate = d(dueDay)), children = subs)
     fun category(title: String, subs: List<ItemNode>) =
         ItemNode(title = title, item = Item.Category, children = subs)
+    fun category(id: String, title: String, subs: List<ItemNode>) =
+        ItemNode(id = id, title = title, item = Item.Category, children = subs)
 
     return listOf(
-        category("Inbox", listOf(
+        category("__inbox__", "Inbox", listOf(
             task("Pay electricity bill", p2),
             task("Buy groceries", t),
             taskDo("Schedule dentist", tmw),
