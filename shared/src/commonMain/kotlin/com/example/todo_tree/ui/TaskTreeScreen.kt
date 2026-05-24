@@ -250,7 +250,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                     mode = inputMode ?: "",
                 )
             } else {
-                TodayBar()
+                TodayBar(onSearchClick = { inputMode = "search"; inputText = "" })
             }
         }
 
@@ -261,10 +261,6 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
             onToggle = { fabExpanded = !fabExpanded },
             onAddRoot = { inputMode = "addRoot"; inputText = "" },
             onAddSubtask = { inputMode = "addSubtask"; inputText = "" },
-            onToggleSearch = {
-                inputMode = if (inputMode == "search") null else "search"
-                if (inputMode != "search") inputText = ""
-            },
             onDelete = { if (cursorId != null) deleteTargetId = cursorId },
             modifier = Modifier
                 .align(Alignment.BottomEnd)

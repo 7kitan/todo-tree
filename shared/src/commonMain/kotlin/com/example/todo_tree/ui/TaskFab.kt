@@ -20,7 +20,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -52,7 +51,6 @@ fun TaskFab(
     onToggle: () -> Unit,
     onAddRoot: () -> Unit,
     onAddSubtask: () -> Unit,
-    onToggleSearch: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -63,7 +61,6 @@ fun TaskFab(
         listOf(
             FabAction("Add root", Icons.Filled.Add) { onAddRoot() },
             FabAction("Add subtask", Icons.AutoMirrored.Filled.KeyboardArrowRight) { onAddSubtask() },
-            FabAction("Search", Icons.Filled.Search) { onToggleSearch() },
             FabAction("Delete", Icons.Filled.Delete) { onDelete() },
         )
     }

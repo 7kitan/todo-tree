@@ -170,13 +170,13 @@ fun EditingTaskRow(
 // ==== Today Bar ====
 
 @Composable
-fun TodayBar() {
+fun TodayBar(onSearchClick: () -> Unit = {}) {
     val now = currentTimeMillis()
     val todayDays = now / 86_400_000L
     val dayNames = arrayOf("Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed")
     val weekday = dayNames[(todayDays % 7).toInt()]
     Row(
-        modifier = Modifier.fillMaxWidth().height(40.dp),
+        modifier = Modifier.fillMaxWidth().height(40.dp).clickable(onClick = onSearchClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(4.dp).fillMaxHeight().background(stripPalette[0]))
@@ -184,9 +184,14 @@ fun TodayBar() {
         Spacer(Modifier.width(6.dp))
         Text(
             "Today, $weekday ${formatDate(now)}",
+            modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Box(Modifier.size(28.dp).clickable(onClick = onSearchClick), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.Search, "Search", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.width(4.dp))
     }
 }
 
@@ -209,8 +214,10 @@ fun InputTaskRow(
     ) {
         strips.forEach { color -> Box(Modifier.width(4.dp).fillMaxHeight().background(color)) }
         Spacer(Modifier.width(6.dp))
-        Box(Modifier.size(20.dp).border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape))
-        Spacer(Modifier.width(4.dp))
+        if (mode != "search") {
+            Box(Modifier.size(20.dp).border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape))
+            Spacer(Modifier.width(4.dp))
+        }
         BasicTextField(
             value = text,
             onValueChange = onTextChange,
