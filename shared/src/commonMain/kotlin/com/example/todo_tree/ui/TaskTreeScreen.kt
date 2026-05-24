@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.todo_tree.viewmodel.TaskViewModel
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
@@ -30,7 +31,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
     var expanded by remember { mutableStateOf(setOf<String>()) }
     val visibleOrder = remember(forest, expanded) { flattenVisible(forest, expanded) }
     var cursorIndex by remember { mutableStateOf(0) }
-    if (visibleOrder.isNotEmpty() && cursorIndex >= visibleOrder.size) cursorIndex = visibleOrder.size - 1
+    if (visibleOrder.isNotEmpty() && cursorIndex >= visibleOrder.size) cursorIndex = visibleOrder.size - 1 // Clamp after pruning or collapse shrinks list
     var pendingEditId by remember { mutableStateOf<String?>(null) }
     var showEdit by remember { mutableStateOf(false) }
     val cursorId = visibleOrder.getOrNull(cursorIndex)?.id
@@ -47,10 +48,15 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
     var vpH by remember { mutableFloatStateOf(0f) }
     val scrollAnim = remember { Animatable(0f) }
 
+    // Cursor-centered scroll: target places the cursor row's midpoint at the
+    // viewport's vertical centre. No clamp — specification requires the cursor
+    // always be centered even when content is shorter than the viewport.
     LaunchedEffect(cursorIndex, vpH) {
         if (vpH <= 0f) return@LaunchedEffect
         scrollAnim.animateTo(cursorIndex * rowH + padPx + rowH / 2f - vpH * 0.5f, tween(200))
     }
+    // Auto-expand: after cursor rests 1s on an unexpanded task, open it.
+    // Pruning: collapse sibling branches so only the cursor's ancestor chain stays expanded.
     LaunchedEffect(cursorIndex) {
         val id = cursorId ?: return@LaunchedEffect; val task = findTaskById(forest, id) ?: return@LaunchedEffect
         delay(1000)
@@ -61,6 +67,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
         }
         if (ne.size < expanded.size) expanded = ne.toSet()
     }
+    // Deferred show to let composition settle before opening the edit sheet
     LaunchedEffect(pendingEditId) { if (pendingEditId != null) showEdit = true }
 
     var accY by remember { mutableStateOf(0f) }; var accX by remember { mutableStateOf(0f) }
@@ -74,15 +81,22 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
         if (visibleOrder.isEmpty()) {
             Text("No tasks", Modifier.padding(horizontal = 16.dp, vertical = 40.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else Column(Modifier.fillMaxWidth().wrapContentHeight().offset { IntOffset(0, -scrollAnim.value.roundToInt()) }
-            .pointerInput(Unit) { detectDragGestures(onDragEnd = { accY = 0f; accX = 0f }, onDragCancel = { accY = 0f; accX = 0f }, onDrag = { ch, da -> ch.consume(); accY += da.y; accX += da.x; if (accY > thr) { moveUp(); accY = 0f }; if (accY < -thr) { moveDown(); accY = 0f }; if (accX > thr) { moveChild(); accX = 0f }; if (accX < -thr) { moveParent(); accX = 0f } }) }
-            .pointerInput(Unit) { awaitPointerEventScope { while (true) { val e = awaitPointerEvent(); val s = e.changes.firstOrNull()?.scrollDelta ?: continue; if (s.y < 0f) moveDown() else if (s.y > 0f) moveUp() } } }
+            // pointerInput keyed on visibleOrder.size so handlers restart when
+            // auto-expand/pruning grows the list. A static key (Unit) would keep
+            // stale visibleOrder refs — moveDown() would check against the
+            // pre-expansion list size and refuse to step into new children.
+            // Drag uses dominant-axis gating: horizontal drift during a vertical
+            // scroll could otherwise trigger moveParent/moveChild (and the resulting
+            // size change would restart the handler mid-gesture).
+            .pointerInput(visibleOrder.size) { detectDragGestures(onDragEnd = { accY = 0f; accX = 0f }, onDragCancel = { accY = 0f; accX = 0f }, onDrag = { ch, da -> ch.consume(); accY += da.y; accX += da.x; if (abs(accY) > abs(accX)) { if (accY > thr) { moveUp(); accY = 0f; accX = 0f }; if (accY < -thr) { moveDown(); accY = 0f; accX = 0f } } else { if (accX > thr) { moveChild(); accX = 0f; accY = 0f }; if (accX < -thr) { moveParent(); accX = 0f; accY = 0f } } }) }
+            .pointerInput(visibleOrder.size) { awaitPointerEventScope { while (true) { val e = awaitPointerEvent(); val s = e.changes.firstOrNull()?.scrollDelta ?: continue; if (s.y < 0f) moveDown() else if (s.y > 0f) moveUp() } } }
             .padding(top = 8.dp, bottom = 8.dp)) {
             visibleOrder.forEachIndexed { i, item ->
                 val t = findTaskById(forest, item.id) ?: return@forEachIndexed
                 val d = (i - cursorIndex).coerceIn(-5, 5)
                 val strips = (0..item.depth).map { stripPalette[it % stripPalette.size] }
                 TaskRow(task = t, strips = strips, hasChildren = t.subtasks.isNotEmpty(), isExpanded = t.id in expanded,
-                    isCursor = i == cursorIndex, alpha = (1f - kotlin.math.abs(d) * 0.25f).coerceIn(0f, 1f),
+                    isCursor = i == cursorIndex, alpha = (1f - abs(d) * 0.25f).coerceIn(0f, 1f),
                     onToggle = { expanded = if (t.id in expanded) expanded - t.id else expanded + t.id },
                     onToggleDone = { viewModel.toggleCompleted(t.id) }, onEdit = { pendingEditId = t.id })
             }
