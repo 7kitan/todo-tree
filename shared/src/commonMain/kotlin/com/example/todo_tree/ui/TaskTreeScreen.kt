@@ -56,6 +56,13 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
     var cursorIndex by remember { mutableIntStateOf(0) }
     if (visibleOrder.isNotEmpty() && cursorIndex >= visibleOrder.size) cursorIndex = visibleOrder.size - 1
     var editingId by remember { mutableStateOf<String?>(null) }
+    var pendingFocusId by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(pendingFocusId, forest, expanded) {
+        val id = pendingFocusId ?: return@LaunchedEffect
+        val idx = flattenVisible(forest, expanded, effectiveQuery).indexOfFirst { it.id == id }
+        if (idx >= 0) { cursorIndex = idx; pendingFocusId = null }
+    }
     var editTitle by remember { mutableStateOf("") }
     var editDoDate by remember { mutableStateOf<Long?>(null) }
     var editDueDate by remember { mutableStateOf<Long?>(null) }
@@ -287,16 +294,19 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                                 p.item is Item.Project -> Item.Project(dueDate = p.dueDate)
                                 else -> Item.Task(doDate = p.doDate, dueDate = p.dueDate)
                             }
-                            if (p.parentRef != null) {
+                            val newId = if (p.parentRef != null) {
                                 findTaskByTitle(forest, p.parentRef)?.let { parent ->
+                                    expanded = expanded + parent.id
                                     viewModel.addSubtask(parent.id, p.title, finalItem)
                                 } ?: viewModel.addRootTask(p.title, finalItem)
                             } else if (cursorId != null) {
+                                expanded = expanded + cursorId
                                 viewModel.addSubtask(cursorId, p.title, finalItem)
                             } else {
                                 viewModel.addRootTask(p.title, finalItem)
                             }
                             inputMode = null; inputText = ""
+                            pendingFocusId = newId
                         }
                     },
                     onClose = { inputMode = null; inputText = "" },

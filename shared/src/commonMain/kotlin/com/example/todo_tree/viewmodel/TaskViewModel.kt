@@ -24,8 +24,8 @@ class TaskViewModel : ViewModel() {
 
     fun setSearchQuery(query: String) { _searchQuery.value = query }
 
-    fun addRootTask(title: String, item: Item = Item.Task()) { if (title.isBlank()) return; _forest.value = _forest.value + ItemNode(title = title.trim(), item = item) }
-    fun addSubtask(parentId: String, title: String, item: Item = Item.Task()) { if (title.isBlank()) return; _forest.value = TaskTree.addTask(_forest.value, parentId, ItemNode(title = title.trim(), item = item)) }
+    fun addRootTask(title: String, item: Item = Item.Task()): String? { if (title.isBlank()) return null; val node = ItemNode(title = title.trim(), item = item); _forest.value = _forest.value + node; return node.id }
+    fun addSubtask(parentId: String, title: String, item: Item = Item.Task()): String? { if (title.isBlank()) return null; val node = ItemNode(title = title.trim(), item = item); _forest.value = TaskTree.addTask(_forest.value, parentId, node); return node.id }
     fun removeTask(taskId: String) { _forest.value = TaskTree.removeTask(_forest.value, taskId) }
     fun toggleCompleted(taskId: String) { _forest.value = TaskTree.toggleCompleted(_forest.value, taskId) }
     fun updateTask(taskId: String, title: String, item: Item) {
