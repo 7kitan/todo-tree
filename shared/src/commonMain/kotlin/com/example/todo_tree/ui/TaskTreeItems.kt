@@ -10,7 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -142,8 +141,6 @@ fun EditingTaskRow(
         ) {
             strips.forEach { color -> Box(Modifier.width(4.dp).fillMaxHeight().background(color)) }
             Spacer(Modifier.width(6.dp))
-            Box(Modifier.size(20.dp).border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape))
-            Spacer(Modifier.width(4.dp))
             BasicTextField(
                 value = title,
                 onValueChange = onTitleChange,
@@ -250,10 +247,6 @@ fun InputTaskRow(
     ) {
         strips.forEach { color -> Box(Modifier.width(4.dp).fillMaxHeight().background(color)) }
         Spacer(Modifier.width(6.dp))
-        if (mode != "search") {
-            Box(Modifier.size(20.dp).border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape))
-            Spacer(Modifier.width(4.dp))
-        }
         BasicTextField(
             value = text,
             onValueChange = onTextChange,

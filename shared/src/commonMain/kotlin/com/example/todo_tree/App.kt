@@ -5,11 +5,15 @@
 
 package com.example.todo_tree
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -23,9 +27,18 @@ import todo_tree.shared.generated.resources.ibm_plex_mono_bold
 import todo_tree.shared.generated.resources.ibm_plex_mono_italic
 import todo_tree.shared.generated.resources.ibm_plex_mono_regular
 
+private val LightColors = lightColorScheme(
+    primary = Color(0xFF1976D2),
+)
+private val DarkColors = darkColorScheme(
+    primary = Color(0xFF90CAF9),
+)
+
 @Composable
 fun App() {
-    MaterialTheme(typography = Typography(
+    MaterialTheme(
+        colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors,
+        typography = Typography(
         bodyLarge = TextStyle(fontFamily = FontFamily(Font(Res.font.ibm_plex_mono_regular, FontWeight.Normal), Font(Res.font.ibm_plex_mono_bold, FontWeight.Bold), Font(Res.font.ibm_plex_mono_italic, FontWeight.Normal)), fontSize = 15.sp),
         bodyMedium = TextStyle(fontFamily = FontFamily(Font(Res.font.ibm_plex_mono_regular)), fontSize = 14.sp),
         bodySmall = TextStyle(fontFamily = FontFamily(Font(Res.font.ibm_plex_mono_regular)), fontSize = 12.sp),

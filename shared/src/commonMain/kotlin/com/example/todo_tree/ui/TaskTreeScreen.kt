@@ -301,7 +301,10 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                     },
                     onClose = { inputMode = null; inputText = "" },
                     depth = if (cursorId != null) (visibleOrder.find { it.id == cursorId }?.depth ?: 0) + 1 else 0,
-                    mode = inputMode ?: "",
+                    mode = when (inputMode) {
+                        "search" -> "search"
+                        else -> if (cursorId != null) "addSubtask" else "addRoot"
+                    },
                 )
             } else {
                 TodayBar(onSearchClick = { inputMode = "search"; inputText = "" })
@@ -313,8 +316,8 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
         TaskFab(
             onClick = { inputMode = "add"; inputText = "" },
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 12.dp, bottom = 12.dp),
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 56.dp),
         )
 
         if (showDoPicker) datePicker(editDoDate, { editDoDate = it; doDateEdited = true }) { showDoPicker = false }
