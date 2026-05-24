@@ -7,19 +7,28 @@ Task manager with infinite nested subtrees, keyboard-first navigation, and due-d
 ## Project Structure
 
 ```
-shared/src/commonMain/kotlin/com/example/todo_tree/
-├── App.kt                  # Root composable + MaterialTheme
-├── TimeUtil.kt             # expect fun currentTimeMillis()
-├── model/
-│   ├── TaskNode.kt         # Core data class
-│   └── TaskTree.kt         # Immutable tree operations
-├── viewmodel/
-│   └── TaskViewModel.kt    # State holder + sample forest
-└── ui/
-    ├── TaskTreeScreen.kt   # Main screen, scroll, gestures, keyboard
-    ├── TaskTreeItems.kt    # TaskRow composable
-    ├── EditTaskSheet.kt    # Edit modal + date pickers
-    └── Navigation.kt       # Flatten, find, parent, siblings, key dispatch
+shared/src/
+├── commonMain/kotlin/com/example/todo_tree/
+│   ├── App.kt              # Root composable + MaterialTheme
+│   ├── TimeUtil.kt         # expect fun currentTimeMillis()
+│   ├── model/
+│   │   ├── TaskNode.kt     # Core data class
+│   │   └── TaskTree.kt     # Immutable tree operations
+│   ├── viewmodel/
+│   │   └── TaskViewModel.kt # State holder + sample forest
+│   └── ui/
+│       ├── TaskTreeScreen.kt
+│       ├── TaskTreeItems.kt
+│       ├── EditTaskSheet.kt
+│       └── Navigation.kt
+├── wasmJsMain/             # Wasm-specific (currentTimeMillis impl)
+├── jvmMain/                # JVM-specific (currentTimeMillis impl)
+├── jvmTest/
+├── androidMain/            # Android-specific (currentTimeMillis impl)
+└── androidHostTest/
+webApp/src/
+└── wasmJsMain/kotlin/com/example/todo_tree/
+    └── main.kt             # Web entry point
 ```
 
 ## Dependencies
@@ -40,7 +49,6 @@ shared/src/commonMain/kotlin/com/example/todo_tree/
 - **Desktop**: `./gradlew :desktopApp:run`
 - **Android**: `./gradlew :androidApp:assembleDebug`
 - **Web (Wasm)**: `./gradlew :webApp:wasmJsBrowserDevelopmentRun`
-- **Web (JS)**: `./gradlew :webApp:jsBrowserDevelopmentRun`
 
 ## Tests
 
