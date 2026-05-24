@@ -86,20 +86,34 @@ fun TaskRow(node: ItemNode, strips: List<Color>, hasChildren: Boolean, isExpande
             textDecoration = if (isDone) TextDecoration.LineThrough else TextDecoration.None,
             color = if (isDone) MaterialTheme.colorScheme.onSurfaceVariant else titleColor,
             style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (node.isCategory) {
+            Spacer(Modifier.width(4.dp))
+            Box(Modifier.background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                Text("Category", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         if (isWaiting) {
             Spacer(Modifier.width(4.dp))
             Box(Modifier.background(Color(0xFFFFC107), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
                 Text("Waiting", style = MaterialTheme.typography.labelSmall, color = Color(0xFF1C1B1F))
             }
         }
-        if (node.dueDate != null) {
+        val doDate = if (!node.isCategory) node.doDate else null
+        val dueDate = node.dueDate
+        if (doDate != null && dueDate != null) {
             Spacer(Modifier.width(6.dp))
-            Text(relativeDate(node.dueDate!!), modifier = editMod,
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = editMod) {
+                Text(relativeDate(doDate), style = MaterialTheme.typography.bodyMedium, color = Color(0xFF6A9955), maxLines = 1)
+                Text(" | ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                Text(relativeDate(dueDate), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, maxLines = 1)
+            }
+        } else if (dueDate != null) {
+            Spacer(Modifier.width(6.dp))
+            Text(relativeDate(dueDate), modifier = editMod,
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, maxLines = 1)
-        }
-        if (!node.isCategory && node.doDate != null && node.dueDate == null) {
+        } else if (doDate != null) {
             Spacer(Modifier.width(6.dp))
-            Text(relativeDate(node.doDate!!), modifier = editMod,
+            Text(relativeDate(doDate), modifier = editMod,
                 style = MaterialTheme.typography.bodyMedium, color = Color(0xFF6A9955), maxLines = 1)
         }
         Spacer(Modifier.width(4.dp))

@@ -14,6 +14,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -175,7 +176,12 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
 
     // ==== Main layout ====
 
-    Box(modifier = modifier.fillMaxSize().clipToBounds().onSizeChanged { screenHeight = it.height.toFloat() }) {
+    Box(modifier = modifier.fillMaxSize().clipToBounds().onSizeChanged { screenHeight = it.height.toFloat() }
+        .clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = { swipeResetCounter++; editingId = null },
+        )) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).onPreviewKeyEvent { event ->
                 handleKey(event, { moveUp() }, { moveDown() }, { moveLeft() }, { moveRight() },

@@ -1,6 +1,6 @@
 // =============================================================================
 //  DATE_PARSER.KT
-//  Natural-language parsing: #category/#project tokens, parent refs via #word,
+//  Natural-language parsing: #category/#project/#cat/#proj tokens, parent refs via #word,
 //  Todoist-style date expressions.
 // =============================================================================
 
@@ -213,8 +213,8 @@ private fun scanHashTokens(input: String): HashScan {
         val m = hashPattern.find(text) ?: break
         val token = m.groupValues[1].lowercase()
         when (token) {
-            "category" -> item = Item.Category
-            "project" -> item = Item.Project()
+            "category", "cat" -> item = Item.Category
+            "project", "proj" -> item = Item.Project()
             else -> if (parentRef == null) parentRef = m.groupValues[1]
         }
         text = text.removeRange(m.range)

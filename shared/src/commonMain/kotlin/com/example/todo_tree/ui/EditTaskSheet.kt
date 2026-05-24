@@ -70,7 +70,14 @@ fun relativeDate(epochMillis: Long): String {
     val days = (target - today).toInt()
     val dayNames = arrayOf("Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed")
     return when {
-        days < 0 -> "Overdue"
+        days < 0 -> {
+            val ago = -days
+            when {
+                ago == 1 -> "Overdue (Yesterday)"
+                ago in 2..6 -> "Overdue ($ago days ago)"
+                else -> "Overdue (${formatDate(epochMillis)})"
+            }
+        }
         days == 0 -> "Today"
         days == 1 -> "Tomorrow"
         days in 2..6 -> "this ${dayNames[(target % 7).toInt()]}"
