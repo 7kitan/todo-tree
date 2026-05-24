@@ -234,7 +234,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                                                     expanded = expanded + node.id
                                                 }
                                             },
-                                            onEdit = { startEdit(node.id) })
+                                            onEdit = if (i == cursorIndex) ({ startEdit(node.id) }) else null)
                                     }
 
                                     if (isTask) {
@@ -250,7 +250,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                                             },
                                             onDelete = { deleteTargetId = node.id },
                                             resetCount = swipeResetCounter,
-                                            enabled = true,
+                                            enabled = i == cursorIndex,
                                             modifier = Modifier.fillMaxWidth(),
                                             content = rowContent,
                                         )

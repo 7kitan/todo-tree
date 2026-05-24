@@ -56,7 +56,7 @@ val stripPalette = listOf(
 
 @Composable
 fun TaskRow(node: ItemNode, strips: List<Color>, hasChildren: Boolean, isExpanded: Boolean,
-    isCursor: Boolean, alpha: Float, onToggle: () -> Unit, onEdit: () -> Unit,
+    isCursor: Boolean, alpha: Float, onToggle: () -> Unit, onEdit: (() -> Unit)? = null,
     waitingBadge: @Composable (() -> Unit)? = null) {
 
     val titleColor = when {
@@ -82,7 +82,8 @@ fun TaskRow(node: ItemNode, strips: List<Color>, hasChildren: Boolean, isExpande
     ) {
         strips.forEach { color -> Box(Modifier.width(4.dp).fillMaxHeight().background(color)) }
         Spacer(Modifier.width(6.dp))
-        Text(node.title, modifier = Modifier.weight(1f).clickable(onClick = onEdit),
+        val editMod = if (onEdit != null) Modifier.clickable(onClick = onEdit) else Modifier
+        Text(node.title, modifier = Modifier.weight(1f).then(editMod),
             textDecoration = if (isDone) TextDecoration.LineThrough else TextDecoration.None,
             color = if (isDone) MaterialTheme.colorScheme.onSurfaceVariant else titleColor,
             style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -94,12 +95,12 @@ fun TaskRow(node: ItemNode, strips: List<Color>, hasChildren: Boolean, isExpande
         }
         if (node.dueDate != null) {
             Spacer(Modifier.width(6.dp))
-            Text(relativeDate(node.dueDate!!), modifier = Modifier.clickable(onClick = onEdit),
+            Text(relativeDate(node.dueDate!!), modifier = editMod,
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, maxLines = 1)
         }
         if (!node.isCategory && node.doDate != null && node.dueDate == null) {
             Spacer(Modifier.width(6.dp))
-            Text(relativeDate(node.doDate!!), modifier = Modifier.clickable(onClick = onEdit),
+            Text(relativeDate(node.doDate!!), modifier = editMod,
                 style = MaterialTheme.typography.bodyMedium, color = Color(0xFF6A9955), maxLines = 1)
         }
         Spacer(Modifier.width(4.dp))
