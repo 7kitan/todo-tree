@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -44,8 +45,8 @@ fun TaskRow(task: TaskNode, strips: List<Color>, hasChildren: Boolean, isExpande
         strips.forEach { color -> Box(Modifier.width(4.dp).fillMaxHeight().background(color)) }
         Spacer(Modifier.width(6.dp))
         Box(Modifier.size(20.dp)
-            .border(1.5.dp, if (task.isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, RoundedCornerShape(0.dp))
-            .background(if (task.isCompleted) MaterialTheme.colorScheme.primary else Color.Transparent)
+            .border(1.5.dp, if (task.isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, CircleShape)
+                .background(if (task.isCompleted) MaterialTheme.colorScheme.primary else Color.Transparent, CircleShape)
             .clickable(onClick = onToggleDone), contentAlignment = Alignment.Center) {
             if (task.isCompleted) Icon(Icons.Filled.Check, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(14.dp))
         }
@@ -53,8 +54,8 @@ fun TaskRow(task: TaskNode, strips: List<Color>, hasChildren: Boolean, isExpande
         Text(task.title, modifier = Modifier.weight(1f).clickable(onClick = onEdit),
             textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
             style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (task.doDate != null) { Spacer(Modifier.width(6.dp)); Text(formatDate(task.doDate), modifier = Modifier.clickable(onClick = onEdit), style = MaterialTheme.typography.labelSmall, maxLines = 1) }
-        if (task.dueDate != null) { Spacer(Modifier.width(6.dp)); Text(relativeDate(task.dueDate), modifier = Modifier.clickable(onClick = onEdit), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error, maxLines = 1) }
+        if (task.doDate != null) { Spacer(Modifier.width(6.dp)); Text(formatDate(task.doDate), modifier = Modifier.clickable(onClick = onEdit), style = MaterialTheme.typography.bodyMedium, maxLines = 1) }
+        if (task.dueDate != null) { Spacer(Modifier.width(6.dp)); Text(relativeDate(task.dueDate), modifier = Modifier.clickable(onClick = onEdit), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, maxLines = 1) }
         Spacer(Modifier.width(4.dp))
         if (hasChildren) {
             Box(Modifier.size(28.dp).clickable(onClick = onToggle), contentAlignment = Alignment.Center) {

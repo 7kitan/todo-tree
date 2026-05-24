@@ -30,8 +30,8 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
     val forest by viewModel.forest.collectAsState()
     var expanded by remember { mutableStateOf(setOf<String>()) }
     val visibleOrder = remember(forest, expanded) { flattenVisible(forest, expanded) }
-    var cursorIndex by remember { mutableStateOf(0) }
-    if (visibleOrder.isNotEmpty() && cursorIndex >= visibleOrder.size) cursorIndex = visibleOrder.size - 1 // Clamp after pruning or collapse shrinks list
+    var cursorIndex by remember { mutableIntStateOf(0) }
+    if (visibleOrder.isNotEmpty() && cursorIndex >= visibleOrder.size) cursorIndex = visibleOrder.size - 1
     var pendingEditId by remember { mutableStateOf<String?>(null) }
     var showEdit by remember { mutableStateOf(false) }
     val cursorId = visibleOrder.getOrNull(cursorIndex)?.id
@@ -39,7 +39,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
     fun moveUp() { if (cursorIndex > 0) cursorIndex-- }
     fun moveDown() { if (cursorIndex < visibleOrder.size - 1) cursorIndex++ }
     fun moveParent() { cursorId?.let { id -> findParent(forest, id)?.let { p -> visibleOrder.indexOfFirst { i -> i.id == p.id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } }
-    fun moveChild() { cursorId?.let { id -> findTaskById(forest, id)?.let { t -> if (t.subtasks.isNotEmpty()) { if (t.id !in expanded) expanded = expanded + t.id; visibleOrder.indexOfFirst { it.id == t.subtasks.first().id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } } }
+    fun moveChild() { cursorId?.let { id -> findTaskById(forest, id)?.let { t -> if (t.subtasks.isNotEmpty()) { if (t.id !in expanded) expanded = expanded + t.id; val nv = flattenVisible(forest, expanded); nv.indexOfFirst { it.id == t.subtasks.first().id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } } }
     fun moveLeft() { cursorId?.let { id -> getSiblings(forest, id).let { s -> val i = s.indexOfFirst { it.id == id }; if (i > 0) visibleOrder.indexOfFirst { it.id == s[i - 1].id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } }
     fun moveRight() { cursorId?.let { id -> getSiblings(forest, id).let { s -> val i = s.indexOfFirst { it.id == id }; if (i >= 0 && i < s.size - 1) visibleOrder.indexOfFirst { it.id == s[i + 1].id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } }
 
@@ -65,7 +65,12 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
             if (eid == id) return@filter true
             var cur = id; while (true) { if (cur == eid) break; val p = findParent(forest, cur) ?: break; cur = p.id }; cur == eid
         }
-        if (ne.size < expanded.size) expanded = ne.toSet()
+        if (ne.size < expanded.size) {
+            val anchor = cursorId
+            expanded = ne.toSet()
+            val nv = flattenVisible(forest, expanded)
+            nv.indexOfFirst { it.id == anchor }.takeIf { it >= 0 }?.let { cursorIndex = it }
+        }
     }
     // Deferred show to let composition settle before opening the edit sheet
     LaunchedEffect(pendingEditId) { if (pendingEditId != null) showEdit = true }
@@ -97,7 +102,18 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                 val strips = (0..item.depth).map { stripPalette[it % stripPalette.size] }
                 TaskRow(task = t, strips = strips, hasChildren = t.subtasks.isNotEmpty(), isExpanded = t.id in expanded,
                     isCursor = i == cursorIndex, alpha = (1f - abs(d) * 0.25f).coerceIn(0f, 1f),
-                    onToggle = { expanded = if (t.id in expanded) expanded - t.id else expanded + t.id },
+                    onToggle = {
+                        val anchor = visibleOrder.getOrNull(cursorIndex)?.id
+                        val wasExpanded = t.id in expanded
+                        expanded = if (wasExpanded) expanded - t.id else expanded + t.id
+                        if (anchor != null) {
+                            val nv = flattenVisible(forest, expanded)
+                            val found = nv.indexOfFirst { it.id == anchor }
+                            if (found >= 0) { cursorIndex = found }
+                            else if (wasExpanded && isDescendant(forest, t.id, anchor))
+                                nv.indexOfFirst { it.id == t.id }.takeIf { it >= 0 }?.let { cursorIndex = it }
+                        }
+                    },
                     onToggleDone = { viewModel.toggleCompleted(t.id) }, onEdit = { pendingEditId = t.id })
             }
         }

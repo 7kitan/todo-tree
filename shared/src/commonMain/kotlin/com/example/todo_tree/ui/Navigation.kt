@@ -48,6 +48,18 @@ fun getSiblings(forest: List<TaskNode>, taskId: String): List<TaskNode> {
     return parent?.subtasks ?: forest
 }
 
+fun isDescendant(forest: List<TaskNode>, ancestorId: String, descendantId: String): Boolean {
+    val ancestor = findTaskById(forest, ancestorId) ?: return false
+    fun walk(nodes: List<TaskNode>): Boolean {
+        for (node in nodes) {
+            if (node.id == descendantId) return true
+            if (walk(node.subtasks)) return true
+        }
+        return false
+    }
+    return walk(ancestor.subtasks)
+}
+
 fun handleKey(event: KeyEvent, onUp: () -> Unit, onDown: () -> Unit, onLeft: () -> Unit,
     onRight: () -> Unit, onToggleDone: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit,
     onAddSubtask: () -> Unit): Boolean {
