@@ -103,6 +103,34 @@ object TaskTree {
         return if (grandparent != null) mapForest(forest, grandparent.id) { it.copy(children = mutable) } else mutable
     }
 
+    // ==== Move to new parent ====
+
+    fun moveTo(forest: List<ItemNode>, itemId: String, newParentId: String): List<ItemNode> {
+        if (itemId == newParentId) return forest
+        if (isDescendantOf(forest, itemId, newParentId)) return forest
+        val item = findById(forest, itemId) ?: return forest
+        val removed = removeFromForest(forest, itemId)
+        return addTask(removed, newParentId, item)
+    }
+
+    private fun findById(forest: List<ItemNode>, targetId: String): ItemNode? {
+        for (node in forest) {
+            if (node.id == targetId) return node
+            findById(node.children, targetId)?.let { return it }
+        }
+        return null
+    }
+
+    private fun isDescendantOf(forest: List<ItemNode>, ancestorId: String, nodeId: String): Boolean {
+        for (node in forest) {
+            if (node.id == ancestorId) {
+                return node.children.any { it.id == nodeId || isDescendantOf(it.children, ancestorId, nodeId) }
+            }
+            if (isDescendantOf(node.children, ancestorId, nodeId)) return true
+        }
+        return false
+    }
+
     // ==== Internal ====
 
     private fun mapForest(forest: List<ItemNode>, targetId: String, transform: (ItemNode) -> ItemNode): List<ItemNode> =

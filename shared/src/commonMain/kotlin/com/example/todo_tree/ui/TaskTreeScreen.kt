@@ -174,8 +174,10 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
     // ==== Gesture thresholds ====
 
     var accY by remember { mutableStateOf(0f) }
+    var scrollAcc by remember { mutableFloatStateOf(0f) }
     var dragStartY by remember { mutableFloatStateOf(0f) }
-    val thr = rowH * 0.3f
+    val thr = rowH * 0.5f
+    val scrollThr = rowH * 0.4f
 
     // ==== Main layout ====
 
@@ -196,7 +198,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                     Text("No tasks", Modifier.padding(horizontal = 16.dp, vertical = 40.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else Column(Modifier.fillMaxWidth().wrapContentHeight().offset { IntOffset(0, -scrollAnim.value.roundToInt()) }
                     .pointerInput(visibleOrder.size) { detectDragGestures(onDragStart = { dragStartY = it.y }, onDragEnd = { if (abs(accY) < thr * 0.5f && dragStartY > screenHeight * 0.75f) swipeResetCounter++; accY = 0f }, onDragCancel = { accY = 0f }, onDrag = { ch, da -> ch.consume(); accY += da.y; if (abs(accY) > thr) { if (accY > thr) { moveUp(); accY = 0f }; if (accY < -thr) { moveDown(); accY = 0f } } }) }
-                    .pointerInput(visibleOrder.size) { awaitPointerEventScope { while (true) { val e = awaitPointerEvent(); val s = e.changes.firstOrNull()?.scrollDelta ?: continue; if (s.y < 0f) moveDown() else if (s.y > 0f) moveUp() } } }
+                    .pointerInput(visibleOrder.size) { awaitPointerEventScope { while (true) { val e = awaitPointerEvent(); val s = e.changes.firstOrNull()?.scrollDelta ?: continue; scrollAcc += s.y; if (scrollAcc > scrollThr) { moveDown(); scrollAcc = 0f }; if (scrollAcc < -scrollThr) { moveUp(); scrollAcc = 0f } } } }
                     .padding(top = 8.dp, bottom = 8.dp)) {
                     visibleOrder.forEachIndexed { i, item ->
                         val node = findTaskById(forest, item.id) ?: return@forEachIndexed
@@ -305,6 +307,15 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                                         ?: findTasksByTitleFuzzy(forest, name, 2).singleOrNull()
                                     if (cat != null) deleteTargetId = cat.id
                                     inputMode = null; inputText = TextFieldValue("")
+                                } else if (p.moveTarget != null && cursorId != null) {
+                                    val target = p.moveTarget.replace("_", " ")
+                                    val found = findTaskByTitle(forest, target)
+                                        ?: findTasksByTitleFuzzy(forest, target, 2).singleOrNull()
+                                    if (found != null && found.id != cursorId) {
+                                        expanded = expanded + found.id
+                                        viewModel.moveTo(cursorId, found.id)
+                                    }
+                                    inputMode = null; inputText = TextFieldValue("")
                                 } else {
                                     val finalItem = when {
                                         p.item is Item.Category -> Item.Category
@@ -379,12 +390,58 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                     }
                 }
 
+                // ==== Fuzzy dropdown for #moveto ====
+
+                val moveTargetName = remember(inputText.text) {
+                    val p = parseTaskInput(inputText.text)
+                    p.moveTarget
+                }
+                val moveMatches = remember(inputText.text, forest) {
+                    val q = moveTargetName ?: return@remember emptyList()
+                    if (cursorId == null) return@remember emptyList()
+                    val descendants = mutableSetOf<String>()
+                    fun collect(nodes: List<ItemNode>) { for (n in nodes) { descendants.add(n.id); collect(n.children) } }
+                    findTaskById(forest, cursorId)?.let { collect(it.children) }
+                    descendants.add(cursorId)
+                    findTasksByTitleFuzzy(forest, q, 5).filter { it.id !in descendants }
+                }
+                if (moveMatches.isNotEmpty()) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shadowElevation = 4.dp,
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                    ) {
+                        Column {
+                            moveMatches.forEach { match ->
+                                val ancestry = remember(match.id, forest) { breadcrumb(forest, match.id) }
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            val t = "#moveto ${match.title.replace(" ", "_")}"
+                                            inputText = TextFieldValue(t, selection = TextRange(t.length))
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                ) {
+                                    Text(text = match.title, style = MaterialTheme.typography.bodyMedium)
+                                    if (ancestry.size > 1) {
+                                        Text(text = ancestry.dropLast(1).joinToString(" > "),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // ==== Fuzzy dropdown for #word parent ref ====
 
                 val refToken = remember(inputText.text) {
                     val m = Regex("""(?:^|\s+)#(\w+)""").find(inputText.text)
                     val t = m?.groupValues?.get(1)?.lowercase() ?: return@remember null
-                    if (t in listOf("category", "cat", "project", "proj", "removecat", "rmcat")) null else t
+                    if (t in listOf("category", "cat", "project", "proj", "removecat", "rmcat", "moveto", "mt")) null else t
                 }
                 val refMatches = remember(inputText.text, forest) {
                     val t = refToken ?: return@remember emptyList()

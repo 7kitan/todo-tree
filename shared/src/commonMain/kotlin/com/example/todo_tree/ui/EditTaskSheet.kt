@@ -87,11 +87,17 @@ fun relativeDate(epochMillis: Long): String {
 }
 
 fun formatDate(epochMillis: Long): String {
+    val todayDays = currentTimeMillis() / 86_400_000L
+    var cy = 1970L; var rd = todayDays
+    while (true) { val d = if (isLeap(cy)) 366L else 365L; if (rd < d) break; rd -= d; cy++ }
+    val curYear = cy
+
     var y = 1970L; var r = epochMillis / 86_400_000L
     while (true) { val d = if (isLeap(y)) 366L else 365L; if (r < d) break; r -= d; y++ }
     val md = if (isLeap(y)) intArrayOf(31,29,31,30,31,30,31,31,30,31,30,31) else intArrayOf(31,28,31,30,31,30,31,31,30,31,30,31)
     var m = 1; for (dm in md) { if (r < dm) break; r -= dm; m++ }
-    return "${m.toString().padStart(2,'0')}-${(r+1).toString().padStart(2,'0')}"
+    val mmdd = "${m.toString().padStart(2,'0')}-${(r+1).toString().padStart(2,'0')}"
+    return if (y == curYear) mmdd else "${y}-${mmdd}"
 }
 
 private fun isLeap(y: Long) = (y % 4L == 0L && y % 100L != 0L) || (y % 400L == 0L)

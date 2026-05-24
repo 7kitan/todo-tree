@@ -38,6 +38,10 @@ class TaskViewModel : ViewModel() {
     fun deleteCompleted() { _forest.value = TaskTree.deleteCompleted(_forest.value) }
     fun moveUp(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.moveUp(_forest.value, taskId) }
     fun moveDown(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.moveDown(_forest.value, taskId) }
+    fun moveTo(taskId: String, newParentId: String) {
+        if (taskId == __inbox__ || newParentId == __inbox__) return
+        _forest.value = TaskTree.moveTo(_forest.value, taskId, newParentId)
+    }
     fun indent(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.indent(_forest.value, taskId) }
     fun outdent(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.outdent(_forest.value, taskId) }
 }

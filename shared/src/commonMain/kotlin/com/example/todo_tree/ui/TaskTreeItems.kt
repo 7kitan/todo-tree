@@ -278,10 +278,8 @@ fun InputTaskRow(
             decorationBox = { inner ->
                 if (text.text.isEmpty()) Text(
                     when (mode) {
-                        "addRoot" -> "Add root task\u2026"
-                        "addSubtask" -> "Add subtask\u2026"
                         "search" -> "Search tasks\u2026"
-                        else -> ""
+                        else -> "Add / command\u2026"
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -319,9 +317,11 @@ fun InputTaskRow(
                                 Text("Syntax", style = MaterialTheme.typography.labelLarge)
                                 Spacer(Modifier.height(6.dp))
                                 val entries = listOf(
+                                    "<title>" to "Add as subtask of focused item",
                                     "#cat / #category" to "Category type",
                                     "#proj / #project" to "Project type",
                                     "#removecat / #rmcat" to "Delete a category",
+                                    "#moveto / #mt" to "Move item to target",
                                     "#word" to "Parent reference",
                                     "do <date>" to "Do (start) date",
                                     "due <date>" to "Due date",

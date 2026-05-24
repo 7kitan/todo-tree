@@ -23,6 +23,7 @@ data class ParsedTaskInput(
     val item: Item = Item.Task(),
     val parentRef: String? = null,
     val removeCatTitle: String? = null,
+    val moveTarget: String? = null,
 )
 
 private val dayMs = 86_400_000L
@@ -107,6 +108,28 @@ private fun nextDayMonth(day: Int, month: Int, todayStart: Long): Long? {
     val nextMax = if (month == 2 && isLeapYear(year + 1)) 29 else monthDays[month - 1]
     if (day > nextMax) return null
     return ymdToEpochDays(year + 1, month, day) * dayMs
+}
+
+// Find the next occurrence of a given day, searching forward month by month.
+private fun nextDay(day: Int, todayStart: Long): Long? {
+    if (day < 1 || day > 31) return null
+    val (year, curMonth, curDay) = epochToYmd(epochDays)
+    // Try current month if day is today or future
+    val curMax = if (curMonth == 2 && isLeapYear(year)) 29 else monthDays[curMonth - 1]
+    if (day <= curMax && day >= curDay) {
+        return ymdToEpochDays(year, curMonth, day) * dayMs
+    }
+    // Try remaining months this year
+    for (m in (curMonth + 1)..12) {
+        val max = if (m == 2 && isLeapYear(year)) 29 else monthDays[m - 1]
+        if (day <= max) return ymdToEpochDays(year, m, day) * dayMs
+    }
+    // Try next year
+    for (m in 1..12) {
+        val max = if (m == 2 && isLeapYear(year + 1)) 29 else monthDays[m - 1]
+        if (day <= max) return ymdToEpochDays(year + 1, m, day) * dayMs
+    }
+    return null
 }
 
 // ==== Date expression parsing ====
@@ -203,13 +226,14 @@ private fun parseDateExpression(expr: String, todayStart: Long): Long? {
 
 // ==== #token scanning ====
 
-private data class HashScan(val stripped: String, val item: Item, val parentRef: String?, val removeCatTitle: String?)
+private data class HashScan(val stripped: String, val item: Item, val parentRef: String?, val removeCatTitle: String?, val moveTarget: String?)
 
 private fun scanHashTokens(input: String): HashScan {
     var text = input
     var item: Item = Item.Task()
     var parentRef: String? = null
     var removeCatTitle: String? = null
+    var moveTarget: String? = null
     val hashPattern = Regex("""(?:^|\s+)#(\w+)""")
     while (true) {
         val m = hashPattern.find(text) ?: break
@@ -218,12 +242,13 @@ private fun scanHashTokens(input: String): HashScan {
             "category", "cat" -> item = Item.Category
             "project", "proj" -> item = Item.Project()
             "removecat", "rmcat" -> removeCatTitle = text.removeRange(m.range).trim()
+            "moveto", "mt" -> moveTarget = text.removeRange(m.range).trim()
             else -> if (parentRef == null) parentRef = m.groupValues[1]
         }
         text = text.removeRange(m.range)
         text = text.trim()
     }
-    return HashScan(text, item, parentRef, removeCatTitle)
+    return HashScan(text, item, parentRef, removeCatTitle, moveTarget)
 }
 
 // ==== Full input parsing ====
@@ -235,6 +260,7 @@ fun parseTaskInput(input: String): ParsedTaskInput {
     val scanned = scanHashTokens(trimmed)
     val text = scanned.stripped
     if (scanned.removeCatTitle != null) return ParsedTaskInput("", removeCatTitle = scanned.removeCatTitle)
+    if (scanned.moveTarget != null) return ParsedTaskInput("", moveTarget = scanned.moveTarget)
     if (text.isBlank()) return ParsedTaskInput(text, item = scanned.item, parentRef = scanned.parentRef)
 
     val todayStart = epochDays * dayMs
@@ -273,19 +299,6 @@ fun parseTaskInput(input: String): ParsedTaskInput {
         if (date != null) return ParsedTaskInput(shortEnd.groupValues[1].trim(), doDate = date, item = scanned.item, parentRef = scanned.parentRef)
     }
 
-    val ordEnd = Regex(
-        """^(.+?)\s+(\d+)(?:st|nd|rd|th)?$""",
-        RegexOption.IGNORE_CASE,
-    ).find(text)
-    if (ordEnd != null) {
-        val day = ordEnd.groupValues[2].toIntOrNull()
-        if (day != null && day in 1..31) {
-            val (_, curMonth, curDay) = epochToYmd(epochDays)
-            val date = nextDayMonth(day, curMonth, todayStart)
-            if (date != null) return ParsedTaskInput(ordEnd.groupValues[1].trim(), doDate = date, item = scanned.item, parentRef = scanned.parentRef)
-        }
-    }
-
     val monthDayEnd = Regex(
         """^(.+?)\s+(${monthNames.joinToString("|")})\s+(\d+)(?:st|nd|rd|th)?$""",
         RegexOption.IGNORE_CASE,
@@ -312,6 +325,72 @@ fun parseTaskInput(input: String): ParsedTaskInput {
         }
     }
 
+    val monthDayMiddle = Regex(
+        """^(.+?)\s+(${monthNames.joinToString("|")})\s+(\d+)(?:st|nd|rd|th)?\s+(.+)$""",
+        RegexOption.IGNORE_CASE,
+    ).find(text)
+    if (monthDayMiddle != null) {
+        val month = months[monthDayMiddle.groupValues[2].lowercase()]
+        val day = monthDayMiddle.groupValues[3].toIntOrNull()
+        val title = "${monthDayMiddle.groupValues[1].trim()} - ${monthDayMiddle.groupValues[4].trim()}"
+        if (month != null && day != null) {
+            val date = nextDayMonth(day, month, todayStart)
+            if (date != null) return ParsedTaskInput(title, doDate = date, item = scanned.item, parentRef = scanned.parentRef)
+        }
+    }
+
+    val dayMonthMiddle = Regex(
+        """^(.+?)\s+(\d+)(?:st|nd|rd|th)?\s+(${monthNames.joinToString("|")})\s+(.+)$""",
+        RegexOption.IGNORE_CASE,
+    ).find(text)
+    if (dayMonthMiddle != null) {
+        val day = dayMonthMiddle.groupValues[2].toIntOrNull()
+        val month = months[dayMonthMiddle.groupValues[3].lowercase()]
+        val title = "${dayMonthMiddle.groupValues[1].trim()} - ${dayMonthMiddle.groupValues[4].trim()}"
+        if (month != null && day != null) {
+            val date = nextDayMonth(day, month, todayStart)
+            if (date != null) return ParsedTaskInput(title, doDate = date, item = scanned.item, parentRef = scanned.parentRef)
+        }
+    }
+
+    val monthDayMid = Regex(
+        """^(${monthNames.joinToString("|")})\s+(\d+)(?:st|nd|rd|th)?\s+(.+)$""",
+        RegexOption.IGNORE_CASE,
+    ).find(text)
+    if (monthDayMid != null) {
+        val month = months[monthDayMid.groupValues[1].lowercase()]
+        val day = monthDayMid.groupValues[2].toIntOrNull()
+        if (month != null && day != null) {
+            val date = nextDayMonth(day, month, todayStart)
+            if (date != null) return ParsedTaskInput(monthDayMid.groupValues[3].trim(), doDate = date, item = scanned.item, parentRef = scanned.parentRef)
+        }
+    }
+
+    val dayMonthMid = Regex(
+        """^(\d+)(?:st|nd|rd|th)?\s+(${monthNames.joinToString("|")})\s+(.+)$""",
+        RegexOption.IGNORE_CASE,
+    ).find(text)
+    if (dayMonthMid != null) {
+        val day = dayMonthMid.groupValues[1].toIntOrNull()
+        val month = months[dayMonthMid.groupValues[2].lowercase()]
+        if (month != null && day != null) {
+            val date = nextDayMonth(day, month, todayStart)
+            if (date != null) return ParsedTaskInput(dayMonthMid.groupValues[3].trim(), doDate = date, item = scanned.item, parentRef = scanned.parentRef)
+        }
+    }
+
+    val ordEnd = Regex(
+        """^(.+?)\s+(\d+)(?:st|nd|rd|th)?$""",
+        RegexOption.IGNORE_CASE,
+    ).find(text)
+    if (ordEnd != null) {
+        val day = ordEnd.groupValues[2].toIntOrNull()
+        if (day != null && day in 1..31) {
+            val date = nextDay(day, todayStart)
+            if (date != null) return ParsedTaskInput(ordEnd.groupValues[1].trim(), doDate = date, item = scanned.item, parentRef = scanned.parentRef)
+        }
+    }
+
     return ParsedTaskInput(text, item = scanned.item, parentRef = scanned.parentRef)
 }
 
@@ -321,9 +400,14 @@ private val dateSuffixPatterns = listOf(
     Regex("""\s+(do|due)\s+(.+?)\s*$""", RegexOption.IGNORE_CASE),
     Regex("""\s+(today|tomorrow|next\s+\w+|mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\s*$""", RegexOption.IGNORE_CASE),
     Regex("""\s+(t(?:oday)?|tmr?w?|nxt(?:\s+\w+)?|\+?\d+[dwm](?:ays?|eeks?|onths?)?)\s*$""", RegexOption.IGNORE_CASE),
-    Regex("""\s+\d+(?:st|nd|rd|th)?\s*$"""),
     Regex("""\s+(${monthNames.joinToString("|")})\s+\d+(?:st|nd|rd|th)?\s*$""", RegexOption.IGNORE_CASE),
     Regex("""\s+\d+(?:st|nd|rd|th)?\s+(${monthNames.joinToString("|")})\s*$""", RegexOption.IGNORE_CASE),
+    Regex("""\s+\d+(?:st|nd|rd|th)?\s*$"""),
+)
+
+private val dateMidPatterns = listOf(
+    Regex("""(?:^|\s+)(${monthNames.joinToString("|")})\s+\d+(?:st|nd|rd|th)?(?=\s|$)""", RegexOption.IGNORE_CASE),
+    Regex("""(?:^|\s+)(\d+(?:st|nd|rd|th)?)\s+(${monthNames.joinToString("|")})(?=\s|$)""", RegexOption.IGNORE_CASE),
 )
 
 fun findDateSuffix(text: String): IntRange? {
@@ -335,6 +419,32 @@ fun findDateSuffix(text: String): IntRange? {
         return (offset + m.range.first)..(offset + m.range.last)
     }
     return null
+}
+
+private fun findAllDateRanges(text: String): List<IntRange> {
+    val result = mutableListOf<IntRange>()
+    // Suffix patterns (end of string) — return at most one
+    val t = text.trimEnd()
+    if (t.isNotEmpty()) {
+        val offset = text.length - t.length
+        for (pattern in dateSuffixPatterns) {
+            val m = pattern.find(t) ?: continue
+            result.add((offset + m.range.first)..(offset + m.range.last))
+            break
+        }
+    }
+    // Mid/prefix patterns — return all matches not overlapping with suffix
+    if (result.isEmpty()) {
+        for (pattern in dateMidPatterns) {
+            var start = 0
+            while (true) {
+                val m = pattern.find(text, start) ?: break
+                result.add(m.range)
+                start = m.range.last + 1
+            }
+        }
+    }
+    return result
 }
 
 private fun findAllHashTokens(text: String): List<IntRange> {
@@ -351,9 +461,9 @@ private fun findAllHashTokens(text: String): List<IntRange> {
 private val highlightColor = Color(0xFF569CD6)
 
 fun dateHighlightTransformation(): VisualTransformation = VisualTransformation { text ->
-    val dateRange = findDateSuffix(text.text)
+    val dateRanges = findAllDateRanges(text.text)
     val hashRanges = findAllHashTokens(text.text)
-    val allRanges = if (dateRange != null) listOf(dateRange) + hashRanges else hashRanges
+    val allRanges = dateRanges + hashRanges
     if (allRanges.isNotEmpty()) {
         val annotated = buildAnnotatedString {
             append(text.text)
