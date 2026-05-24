@@ -31,6 +31,8 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.todo_tree.model.Item
@@ -52,8 +54,8 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
     val forest by viewModel.forest.collectAsState()
     var expanded by remember { mutableStateOf(setOf("__inbox__")) }
     var inputMode by remember { mutableStateOf<String?>(null) } // "add" | "search" | null
-    var inputText by remember { mutableStateOf("") }
-    val effectiveQuery = remember(inputMode, inputText) { if (inputMode == "search") inputText else "" }
+    var inputText by remember { mutableStateOf(TextFieldValue("")) }
+    val effectiveQuery = remember(inputMode, inputText.text) { if (inputMode == "search") inputText.text else "" }
     val visibleOrder = remember(forest, expanded, effectiveQuery) { flattenVisible(forest, expanded, effectiveQuery) }
     var cursorIndex by remember { mutableIntStateOf(0) }
     if (visibleOrder.isNotEmpty() && cursorIndex >= visibleOrder.size) cursorIndex = visibleOrder.size - 1
@@ -188,7 +190,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                 handleKey(event, { moveUp() }, { moveDown() }, { moveLeft() }, { moveRight() },
                     { if (cursorId != null) viewModel.toggleCompleted(cursorId) }, { startEdit(cursorId) },
                     { if (cursorId != null) { deleteTargetId = cursorId } },
-                    { if (cursorId != null) { inputMode = "add"; inputText = "" } })
+                    { if (cursorId != null) { inputMode = "add"; inputText = TextFieldValue("") } })
             }.clipToBounds().onSizeChanged { vpH = it.height.toFloat() }) {
                 if (visibleOrder.isEmpty()) {
                     Text("No tasks", Modifier.padding(horizontal = 16.dp, vertical = 40.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -295,22 +297,23 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                         onTextChange = { inputText = it },
                         visualTransformation = dateHighlightTransformation(),
                         onDone = {
-                            if (inputText.isNotBlank()) {
-                                val p = parseTaskInput(inputText)
+                            if (inputText.text.isNotBlank()) {
+                                val p = parseTaskInput(inputText.text)
                                 if (p.removeCatTitle != null) {
-                                    val name = p.removeCatTitle
+                                    val name = p.removeCatTitle.replace("_", " ")
                                     val cat = findTaskByTitle(forest, name)
                                         ?: findTasksByTitleFuzzy(forest, name, 2).singleOrNull()
                                     if (cat != null) deleteTargetId = cat.id
-                                    inputMode = null; inputText = ""
+                                    inputMode = null; inputText = TextFieldValue("")
                                 } else {
                                     val finalItem = when {
                                         p.item is Item.Category -> Item.Category
                                         p.item is Item.Project -> Item.Project(dueDate = p.dueDate)
                                         else -> Item.Task(doDate = p.doDate, dueDate = p.dueDate)
                                     }
-                                    val newId = if (p.parentRef != null) {
-                                        findTaskByTitle(forest, p.parentRef)?.let { parent ->
+                                    val ref = p.parentRef?.replace("_", " ")
+                                    val newId = if (ref != null) {
+                                        findTaskByTitle(forest, ref)?.let { parent ->
                                             expanded = expanded + parent.id
                                             viewModel.addSubtask(parent.id, p.title, finalItem)
                                         } ?: run { expanded = expanded + "__inbox__"; viewModel.addInboxChild(p.title, finalItem) }
@@ -321,12 +324,12 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                                         expanded = expanded + "__inbox__"
                                         viewModel.addInboxChild(p.title, finalItem)
                                     }
-                                    inputMode = null; inputText = ""
+                                    inputMode = null; inputText = TextFieldValue("")
                                     pendingFocusId = newId
                                 }
                             }
                         },
-                        onClose = { inputMode = null; inputText = "" },
+                        onClose = { inputMode = null; inputText = TextFieldValue("") },
                         depth = if (cursorId != null) (visibleOrder.find { it.id == cursorId }?.depth ?: 0) + 1 else 0,
                         mode = when (inputMode) {
                             "search" -> "search"
@@ -334,13 +337,13 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                         },
                     )
                 } else {
-                    TodayBar(onSearchClick = { inputMode = "search"; inputText = "" })
+                    TodayBar(onSearchClick = { inputMode = "search"; inputText = TextFieldValue("") })
                 }
 
                 // ==== Fuzzy dropdown for #removecat ====
 
-                val catMatches = remember(inputText, forest) {
-                    val p = parseTaskInput(inputText)
+                val catMatches = remember(inputText.text, forest) {
+                    val p = parseTaskInput(inputText.text)
                     val q = p.removeCatTitle
                     if (q.isNullOrBlank()) emptyList()
                     else findTasksByTitleFuzzy(forest, q, 5).filter { it.item is Item.Category && it.id != "__inbox__" }
@@ -354,14 +357,69 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                     ) {
                         Column {
                             catMatches.forEach { match ->
-                                Text(
-                                    text = match.title,
+                                val ancestry = remember(match.id, forest) { breadcrumb(forest, match.id) }
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { inputText = "#removecat ${match.title}" }
+                                        .clickable {
+                                            val t = "#removecat ${match.title.replace(" ", "_")}"
+                                            inputText = TextFieldValue(t, selection = TextRange(t.length))
+                                        }
                                         .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
+                                ) {
+                                    Text(text = match.title, style = MaterialTheme.typography.bodyMedium)
+                                    if (ancestry.size > 1) {
+                                        Text(text = ancestry.dropLast(1).joinToString(" > "),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ==== Fuzzy dropdown for #word parent ref ====
+
+                val refToken = remember(inputText.text) {
+                    val m = Regex("""(?:^|\s+)#(\w+)""").find(inputText.text)
+                    val t = m?.groupValues?.get(1)?.lowercase() ?: return@remember null
+                    if (t in listOf("category", "cat", "project", "proj", "removecat", "rmcat")) null else t
+                }
+                val refMatches = remember(inputText.text, forest) {
+                    val t = refToken ?: return@remember emptyList()
+                    findTasksByTitleFuzzy(forest, t, 5)
+                }
+                if (refMatches.isNotEmpty()) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shadowElevation = 4.dp,
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                    ) {
+                        Column {
+                            refMatches.forEach { match ->
+                                val ancestry = remember(match.id, forest) { breadcrumb(forest, match.id) }
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            val hashPattern = Regex("""(?:^|\s+)#(\w+)""")
+                                            val m = hashPattern.find(inputText.text) ?: return@clickable
+                                            val prefix = inputText.text.substring(0, m.range.first)
+                                            val suffix = inputText.text.substring(m.range.last + 1)
+                                            val newText = "${prefix}#${match.title.replace(" ", "_")}$suffix "
+                                            inputText = TextFieldValue(newText, selection = TextRange(newText.length))
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                ) {
+                                    Text(text = match.title, style = MaterialTheme.typography.bodyMedium)
+                                    if (ancestry.size > 1) {
+                                        Text(text = ancestry.dropLast(1).joinToString(" > "),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
                             }
                         }
                     }
@@ -372,7 +430,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
         // ==== FAB (single button) ====
 
         TaskFab(
-            onClick = { inputMode = "add"; inputText = "" },
+            onClick = { inputMode = "add"; inputText = TextFieldValue("") },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 56.dp),

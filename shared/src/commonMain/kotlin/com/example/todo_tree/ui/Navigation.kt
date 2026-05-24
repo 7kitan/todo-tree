@@ -124,6 +124,17 @@ fun findTasksByTitleFuzzy(forest: List<ItemNode>, query: String, maxResults: Int
     return result
 }
 
+fun breadcrumb(forest: List<ItemNode>, nodeId: String): List<String> {
+    fun walk(nodes: List<ItemNode>, path: List<String>): List<String>? {
+        for (node in nodes) {
+            if (node.id == nodeId) return path + node.title
+            walk(node.children, path + node.title)?.let { return it }
+        }
+        return null
+    }
+    return walk(forest, emptyList()) ?: emptyList()
+}
+
 fun earliestDueDate(node: ItemNode): Long? {
     var best = node.dueDate
     for (child in node.children) {

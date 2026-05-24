@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import com.example.todo_tree.currentTimeMillis
@@ -26,6 +27,7 @@ import com.example.todo_tree.model.isCategory
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
@@ -41,7 +43,9 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
 import com.example.todo_tree.model.Item
 import com.example.todo_tree.model.ItemNode
 import com.example.todo_tree.model.TaskState
@@ -246,8 +250,8 @@ fun TodayBar(onSearchClick: () -> Unit = {}) {
 
 @Composable
 fun InputTaskRow(
-    text: String,
-    onTextChange: (String) -> Unit,
+    text: TextFieldValue,
+    onTextChange: (TextFieldValue) -> Unit,
     onDone: () -> Unit,
     onClose: () -> Unit,
     depth: Int,
@@ -272,7 +276,7 @@ fun InputTaskRow(
             visualTransformation = visualTransformation,
             textStyle = MaterialTheme.typography.bodyMedium,
             decorationBox = { inner ->
-                if (text.isEmpty()) Text(
+                if (text.text.isEmpty()) Text(
                     when (mode) {
                         "addRoot" -> "Add root task\u2026"
                         "addSubtask" -> "Add subtask\u2026"
@@ -293,6 +297,47 @@ fun InputTaskRow(
                 tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(20.dp),
             )
+        }
+        if (mode != "search") {
+            Spacer(Modifier.width(4.dp))
+            var showHelp by remember { mutableStateOf(false) }
+            Box {
+                Box(Modifier.size(28.dp).clickable(onClick = { showHelp = true }), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Info, "Help", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                }
+                if (showHelp) {
+                    Popup(
+                        onDismissRequest = { showHelp = false },
+                        alignment = Alignment.TopEnd,
+                    ) {
+                        Surface(
+                            shadowElevation = 8.dp,
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                        ) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text("Syntax", style = MaterialTheme.typography.labelLarge)
+                                Spacer(Modifier.height(6.dp))
+                                val entries = listOf(
+                                    "#cat / #category" to "Category type",
+                                    "#proj / #project" to "Project type",
+                                    "#removecat / #rmcat" to "Delete a category",
+                                    "#word" to "Parent reference",
+                                    "do <date>" to "Do (start) date",
+                                    "due <date>" to "Due date",
+                                    "<date>" to "Do date (short)",
+                                )
+                                entries.forEach { (token, desc) ->
+                                    Row {
+                                        Text(token, modifier = Modifier.width(140.dp), style = MaterialTheme.typography.bodySmall)
+                                        Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         Spacer(Modifier.width(4.dp))
         Box(Modifier.size(28.dp).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
