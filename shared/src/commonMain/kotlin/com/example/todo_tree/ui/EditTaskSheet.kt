@@ -12,16 +12,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.todo_tree.currentTimeMillis
-import com.example.todo_tree.model.TaskNode
+import com.example.todo_tree.model.Item
+import com.example.todo_tree.model.ItemNode
+import com.example.todo_tree.model.doDate
+import com.example.todo_tree.model.dueDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditTaskSheet(task: TaskNode, onDismiss: () -> Unit, onSave: (String, Long?, Long?) -> Unit) {
+fun EditTaskSheet(task: ItemNode, onDismiss: () -> Unit, onSave: (String, Long?, Long?) -> Unit) {
     var title by remember { mutableStateOf(task.title) }
-    var doMillis by remember { mutableStateOf(task.doDate) }
-    var dueMillis by remember { mutableStateOf(task.dueDate) }
+    var doMillis by remember { mutableStateOf<Long?>(task.doDate) }
+    var dueMillis by remember { mutableStateOf<Long?>(task.dueDate) }
     var showDo by remember { mutableStateOf(false) }
     var showDue by remember { mutableStateOf(false) }
+    val isProject = task.item is Item.Project
+    val isCategory = task.item is Item.Category
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {

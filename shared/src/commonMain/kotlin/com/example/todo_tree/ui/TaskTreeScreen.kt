@@ -1,7 +1,7 @@
 // =============================================================================
 //  TASK_TREE_SCREEN.KT
-//  Main screen: custom scroll via Animatable, discrete gesture/wheel stepping,
-//  keyboard navigation, auto-expand, cursor-centered viewport.
+//  Main screen: custom scroll via Animatable, keyboard nav, auto-expand,
+//  swipe actions per row, unified add mode, inline edit with type awareness.
 // =============================================================================
 
 package com.example.todo_tree.ui
@@ -16,7 +16,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -32,7 +31,11 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.example.todo_tree.model.TaskNode
+import com.example.todo_tree.model.Item
+import com.example.todo_tree.model.ItemNode
+import com.example.todo_tree.model.TaskState
+import com.example.todo_tree.model.doDate
+import com.example.todo_tree.model.dueDate
 import com.example.todo_tree.viewmodel.TaskViewModel
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -46,7 +49,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
 
     val forest by viewModel.forest.collectAsState()
     var expanded by remember { mutableStateOf(setOf<String>()) }
-    var inputMode by remember { mutableStateOf<String?>(null) } // "addRoot" | "addSubtask" | "search" | null
+    var inputMode by remember { mutableStateOf<String?>(null) } // "add" | "search" | null
     var inputText by remember { mutableStateOf("") }
     val effectiveQuery = remember(inputMode, inputText) { if (inputMode == "search") inputText else "" }
     val visibleOrder = remember(forest, expanded, effectiveQuery) { flattenVisible(forest, expanded, effectiveQuery) }
@@ -56,26 +59,40 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
     var editTitle by remember { mutableStateOf("") }
     var editDoDate by remember { mutableStateOf<Long?>(null) }
     var editDueDate by remember { mutableStateOf<Long?>(null) }
+    var editItem by remember { mutableStateOf<Item>(Item.Task()) }
     var doDateEdited by remember { mutableStateOf(false) }
     var dueDateEdited by remember { mutableStateOf(false) }
     var showDoPicker by remember { mutableStateOf(false) }
     var showDuePicker by remember { mutableStateOf(false) }
     val cursorId = visibleOrder.getOrNull(cursorIndex)?.id
-    var fabExpanded by remember { mutableStateOf(false) }
     var screenHeight by remember { mutableFloatStateOf(0f) }
-    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var deleteTargetId by remember { mutableStateOf<String?>(null) }
 
     // ==== Edit helpers ====
 
     fun startEdit(taskId: String?) {
-        val task = taskId?.let { findTaskById(forest, it) } ?: return
+        val node = taskId?.let { findTaskById(forest, it) } ?: return
         editingId = taskId
-        editTitle = task.title
-        editDoDate = task.doDate
-        editDueDate = task.dueDate
+        editTitle = node.title
+        editDoDate = node.doDate
+        editDueDate = node.dueDate
+        editItem = node.item
         doDateEdited = false
         dueDateEdited = false
+    }
+
+    fun buildItemFromEdit(p: ParsedTaskInput, currentItem: Item?, finalDoDate: Long?, finalDueDate: Long?): Item = when {
+        currentItem is Item.Category -> Item.Category
+        p.item is Item.Category -> Item.Category
+        p.item is Item.Project -> Item.Project(
+            state = (currentItem as? Item.Project)?.state ?: TaskState.Active,
+            dueDate = finalDueDate,
+        )
+        currentItem is Item.Project -> Item.Project(
+            state = currentItem.state,
+            dueDate = finalDueDate,
+        )
+        else -> Item.Task(doDate = finalDoDate, dueDate = finalDueDate)
     }
 
     // ==== Scroll & animation constants ====
@@ -110,7 +127,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
     fun moveUp() { if (cursorIndex > 0) cursorIndex-- }
     fun moveDown() { if (cursorIndex < visibleOrder.size - 1) cursorIndex++ }
     fun moveParent() { cursorId?.let { id -> findParent(forest, id)?.let { p -> visibleOrder.indexOfFirst { i -> i.id == p.id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } }
-    fun moveChild() { cursorId?.let { id -> findTaskById(forest, id)?.let { t -> if (t.subtasks.isNotEmpty()) { if (t.id !in expanded) expanded = expanded + t.id; val nv = flattenVisible(forest, expanded, effectiveQuery); nv.indexOfFirst { it.id == t.subtasks.first().id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } } }
+    fun moveChild() { cursorId?.let { id -> findTaskById(forest, id)?.let { t -> if (t.children.isNotEmpty()) { if (t.id !in expanded) expanded = expanded + t.id; val nv = flattenVisible(forest, expanded, effectiveQuery); nv.indexOfFirst { it.id == t.children.first().id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } } }
     fun moveLeft() { cursorId?.let { id -> getSiblings(forest, id).let { s -> val i = s.indexOfFirst { it.id == id }; if (i > 0) visibleOrder.indexOfFirst { it.id == s[i - 1].id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } }
     fun moveRight() { cursorId?.let { id -> getSiblings(forest, id).let { s -> val i = s.indexOfFirst { it.id == id }; if (i >= 0 && i < s.size - 1) visibleOrder.indexOfFirst { it.id == s[i + 1].id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } }
 
@@ -121,9 +138,9 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
         scrollAnim.animateTo(cursorIndex * rowH + padPx + rowH / 2f - vpH * 0.5f, tween(200))
     }
     LaunchedEffect(cursorIndex) {
-        val id = cursorId ?: return@LaunchedEffect; val task = findTaskById(forest, id) ?: return@LaunchedEffect
+        val id = cursorId ?: return@LaunchedEffect; val node = findTaskById(forest, id) ?: return@LaunchedEffect
         delay(1000)
-        if (task.subtasks.isNotEmpty() && task.id !in expanded) expanded = expanded + task.id
+        if (node.children.isNotEmpty() && node.id !in expanded) expanded = expanded + node.id
         val ne = expanded.filter { eid ->
             if (eid == id) return@filter true
             var cur = id; while (true) { if (cur == eid) break; val p = findParent(forest, cur) ?: break; cur = p.id }; cur == eid
@@ -137,30 +154,27 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
 
     // ==== Gesture thresholds ====
 
-    var accY by remember { mutableStateOf(0f) }; var accX by remember { mutableStateOf(0f) }
+    var accY by remember { mutableStateOf(0f) }
     val thr = rowH * 0.3f
 
     // ==== Main layout ====
 
     Box(modifier = modifier.fillMaxSize().clipToBounds().onSizeChanged { screenHeight = it.height.toFloat() }) {
-        if (fabExpanded) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.25f)).clickable { fabExpanded = false })
-        }
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).onPreviewKeyEvent { event ->
                 handleKey(event, { moveUp() }, { moveDown() }, { moveLeft() }, { moveRight() },
                     { if (cursorId != null) viewModel.toggleCompleted(cursorId) }, { startEdit(cursorId) },
                     { if (cursorId != null) { deleteTargetId = cursorId } },
-                    { if (cursorId != null) { inputMode = "addSubtask"; inputText = "" } })
+                    { if (cursorId != null) { inputMode = "add"; inputText = "" } })
             }.clipToBounds().onSizeChanged { vpH = it.height.toFloat() }) {
                 if (visibleOrder.isEmpty()) {
                     Text("No tasks", Modifier.padding(horizontal = 16.dp, vertical = 40.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else Column(Modifier.fillMaxWidth().wrapContentHeight().offset { IntOffset(0, -scrollAnim.value.roundToInt()) }
-                    .pointerInput(visibleOrder.size) { detectDragGestures(onDragEnd = { accY = 0f; accX = 0f }, onDragCancel = { accY = 0f; accX = 0f }, onDrag = { ch, da -> ch.consume(); accY += da.y; accX += da.x; if (abs(accY) > abs(accX)) { if (accY > thr) { moveUp(); accY = 0f; accX = 0f }; if (accY < -thr) { moveDown(); accY = 0f; accX = 0f } } else { if (accX > thr) { moveChild(); accX = 0f; accY = 0f }; if (accX < -thr) { moveParent(); accX = 0f; accY = 0f } } }) }
+                    .pointerInput(visibleOrder.size) { detectDragGestures(onDragEnd = { accY = 0f }, onDragCancel = { accY = 0f }, onDrag = { ch, da -> ch.consume(); accY += da.y; if (abs(accY) > thr) { if (accY > thr) { moveUp(); accY = 0f }; if (accY < -thr) { moveDown(); accY = 0f } } }) }
                     .pointerInput(visibleOrder.size) { awaitPointerEventScope { while (true) { val e = awaitPointerEvent(); val s = e.changes.firstOrNull()?.scrollDelta ?: continue; if (s.y < 0f) moveDown() else if (s.y > 0f) moveUp() } } }
                     .padding(top = 8.dp, bottom = 8.dp)) {
                     visibleOrder.forEachIndexed { i, item ->
-                        val t = findTaskById(forest, item.id) ?: return@forEachIndexed
+                        val node = findTaskById(forest, item.id) ?: return@forEachIndexed
                         key(item.id) {
                             AnimatedVisibility(
                                 visible = true,
@@ -172,7 +186,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                                     EditingTaskRow(
                                         title = editTitle,
                                         onTitleChange = { value: String -> editTitle = value },
-                                        visualTransformation = dateHighlightTransformation(),
+                                        item = editItem,
                                         doDate = editDoDate,
                                         dueDate = editDueDate,
                                         onDoDateClick = { showDoPicker = true },
@@ -182,9 +196,11 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                                         onSave = {
                                             if (editingId != null) {
                                                 val p = parseTaskInput(editTitle)
-                                                viewModel.updateTask(editingId!!, p.title,
-                                                    if (doDateEdited) editDoDate else p.doDate,
-                                                    if (dueDateEdited) editDueDate else p.dueDate)
+                                                val task = findTaskById(forest, editingId!!)
+                                                val finalDoDate = if (doDateEdited) editDoDate else p.doDate
+                                                val finalDueDate = if (dueDateEdited) editDueDate else p.dueDate
+                                                val newItem = buildItemFromEdit(p, task?.item, finalDoDate, finalDueDate)
+                                                viewModel.updateTask(editingId!!, p.title, newItem)
                                                 editingId = null
                                             }
                                         },
@@ -192,22 +208,45 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                                         strips = strips,
                                     )
                                 } else {
-                                    TaskRow(task = t, strips = strips, hasChildren = t.subtasks.isNotEmpty(), isExpanded = t.id in expanded,
-                                    isCursor = i == cursorIndex, alpha = (1f - abs(d) * 0.25f).coerceIn(0f, 1f),
-                                    onToggle = {
-                                        val anchor = visibleOrder.getOrNull(cursorIndex)?.id
-                                        val wasExpanded = t.id in expanded
-                                        if (wasExpanded) {
-                                            pendingRemovals = pendingRemovals + t.id
-                                            if (anchor != null && isDescendant(forest, t.id, anchor)) {
-                                                val idx = visibleOrder.indexOfFirst { it.id == t.id }
-                                                if (idx >= 0) cursorIndex = idx
-                                            }
-                                        } else {
-                                            expanded = expanded + t.id
-                                        }
-                                    },
-                                    onToggleDone = { viewModel.toggleCompleted(t.id) }, onEdit = { startEdit(t.id) })
+                                    val isTask = node.item is Item.Task
+                                    val rowContent = @Composable {
+                                        TaskRow(node = node, strips = strips, hasChildren = node.children.isNotEmpty(), isExpanded = node.id in expanded,
+                                            isCursor = i == cursorIndex, alpha = (1f - abs(d) * 0.25f).coerceIn(0f, 1f),
+                                            onToggle = {
+                                                val anchor = visibleOrder.getOrNull(cursorIndex)?.id
+                                                val wasExpanded = node.id in expanded
+                                                if (wasExpanded) {
+                                                    pendingRemovals = pendingRemovals + node.id
+                                                    if (anchor != null && isDescendant(forest, node.id, anchor)) {
+                                                        val idx = visibleOrder.indexOfFirst { it.id == node.id }
+                                                        if (idx >= 0) cursorIndex = idx
+                                                    }
+                                                } else {
+                                                    expanded = expanded + node.id
+                                                }
+                                            },
+                                            onEdit = { startEdit(node.id) })
+                                    }
+
+                                    if (isTask) {
+                                        val taskItem = node.item
+                                        SwipeActionsRow(
+                                            onDone = { viewModel.toggleCompleted(node.id) },
+                                            onWaiting = {
+                                                val newState = when (taskItem.state) {
+                                                    is TaskState.Waiting -> TaskState.Active
+                                                    else -> TaskState.Waiting
+                                                }
+                                                viewModel.updateTask(node.id, node.title, taskItem.copy(state = newState))
+                                            },
+                                            onDelete = { deleteTargetId = node.id },
+                                            enabled = true,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            content = rowContent,
+                                        )
+                                    } else {
+                                        Box(Modifier.fillMaxWidth()) { rowContent() }
+                                    }
                                 }
                             }
                         }
@@ -231,22 +270,27 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                     onTextChange = { inputText = it },
                     visualTransformation = dateHighlightTransformation(),
                     onDone = {
-                        when (inputMode) {
-                            "addRoot" -> if (inputText.isNotBlank()) {
-                                val p = parseTaskInput(inputText)
-                                viewModel.addRootTask(p.title, p.doDate, p.dueDate)
-                                inputMode = null; inputText = ""
+                        if (inputText.isNotBlank()) {
+                            val p = parseTaskInput(inputText)
+                            val finalItem = when {
+                                p.item is Item.Category -> Item.Category
+                                p.item is Item.Project -> Item.Project(dueDate = p.dueDate)
+                                else -> Item.Task(doDate = p.doDate, dueDate = p.dueDate)
                             }
-                            "addSubtask" -> if (inputText.isNotBlank() && cursorId != null) {
-                                val p = parseTaskInput(inputText)
-                                viewModel.addSubtask(cursorId, p.title, p.doDate, p.dueDate)
-                                inputMode = null; inputText = ""
+                            if (p.parentRef != null) {
+                                findTaskByTitle(forest, p.parentRef)?.let { parent ->
+                                    viewModel.addSubtask(parent.id, p.title, finalItem)
+                                } ?: viewModel.addRootTask(p.title, finalItem)
+                            } else if (cursorId != null) {
+                                viewModel.addSubtask(cursorId, p.title, finalItem)
+                            } else {
+                                viewModel.addRootTask(p.title, finalItem)
                             }
-                            else -> {}
+                            inputMode = null; inputText = ""
                         }
                     },
                     onClose = { inputMode = null; inputText = "" },
-                    depth = if (inputMode == "addSubtask") d + 1 else 0,
+                    depth = if (cursorId != null) (visibleOrder.find { it.id == cursorId }?.depth ?: 0) + 1 else 0,
                     mode = inputMode ?: "",
                 )
             } else {
@@ -254,21 +298,15 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
             }
         }
 
-        // ==== FAB with radial menu ====
+        // ==== FAB (single button) ====
 
         TaskFab(
-            expanded = fabExpanded,
-            onToggle = { fabExpanded = !fabExpanded },
-            onAddRoot = { inputMode = "addRoot"; inputText = "" },
-            onAddSubtask = { inputMode = "addSubtask"; inputText = "" },
-            onDelete = { if (cursorId != null) deleteTargetId = cursorId },
+            onClick = { inputMode = "add"; inputText = "" },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .offset { IntOffset(0, -(screenHeight * 0.25f).roundToInt()) }
-                .padding(end = 12.dp),
+                .padding(end = 12.dp, bottom = 12.dp),
         )
 
-        val density = LocalDensity.current
         if (showDoPicker) datePicker(editDoDate, { editDoDate = it; doDateEdited = true }) { showDoPicker = false }
         if (showDuePicker) datePicker(editDueDate, { editDueDate = it; dueDateEdited = true }) { showDuePicker = false }
     }
@@ -283,16 +321,6 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
             text = { Text("Remove \"${task?.title ?: "?"}\"?") },
             confirmButton = { TextButton(onClick = { viewModel.removeTask(deleteTargetId!!); deleteTargetId = null }) { Text("Delete") } },
             dismissButton = { TextButton(onClick = { deleteTargetId = null }) { Text("Cancel") } },
-        )
-    }
-
-    if (showDeleteConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("Delete completed") },
-            text = { Text("Remove all completed tasks?") },
-            confirmButton = { TextButton(onClick = { viewModel.deleteCompleted(); showDeleteConfirmDialog = false }) { Text("Delete") } },
-            dismissButton = { TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") } },
         )
     }
 }

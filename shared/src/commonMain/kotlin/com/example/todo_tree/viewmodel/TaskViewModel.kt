@@ -7,7 +7,9 @@ package com.example.todo_tree.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.example.todo_tree.currentTimeMillis
-import com.example.todo_tree.model.TaskNode
+import com.example.todo_tree.model.Item
+import com.example.todo_tree.model.ItemNode
+import com.example.todo_tree.model.TaskState
 import com.example.todo_tree.model.TaskTree
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,19 +17,19 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class TaskViewModel : ViewModel() {
     private val _forest = MutableStateFlow(sampleForest())
-    val forest: StateFlow<List<TaskNode>> = _forest.asStateFlow()
+    val forest: StateFlow<List<ItemNode>> = _forest.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     fun setSearchQuery(query: String) { _searchQuery.value = query }
 
-    fun addRootTask(title: String, doDate: Long? = null, dueDate: Long? = null) { if (title.isBlank()) return; _forest.value = _forest.value + TaskNode(title = title.trim(), doDate = doDate, dueDate = dueDate) }
-    fun addSubtask(parentId: String, title: String, doDate: Long? = null, dueDate: Long? = null) { if (title.isBlank()) return; _forest.value = TaskTree.addTask(_forest.value, parentId, TaskNode(title = title.trim(), doDate = doDate, dueDate = dueDate)) }
+    fun addRootTask(title: String, item: Item = Item.Task()) { if (title.isBlank()) return; _forest.value = _forest.value + ItemNode(title = title.trim(), item = item) }
+    fun addSubtask(parentId: String, title: String, item: Item = Item.Task()) { if (title.isBlank()) return; _forest.value = TaskTree.addTask(_forest.value, parentId, ItemNode(title = title.trim(), item = item)) }
     fun removeTask(taskId: String) { _forest.value = TaskTree.removeTask(_forest.value, taskId) }
     fun toggleCompleted(taskId: String) { _forest.value = TaskTree.toggleCompleted(_forest.value, taskId) }
-    fun updateTask(taskId: String, title: String, doDate: Long?, dueDate: Long?) {
-        _forest.value = TaskTree.updateTask(_forest.value, taskId) { it.copy(title = title, doDate = doDate, dueDate = dueDate) }
+    fun updateTask(taskId: String, title: String, item: Item) {
+        _forest.value = TaskTree.updateTask(_forest.value, taskId) { it.copy(title = title.trim(), item = item) }
     }
     fun deleteCompleted() { _forest.value = TaskTree.deleteCompleted(_forest.value) }
     fun moveUp(taskId: String) { _forest.value = TaskTree.moveUp(_forest.value, taskId) }
@@ -40,10 +42,11 @@ class TaskViewModel : ViewModel() {
 
 private val epochDay: Long get() = currentTimeMillis() / 86_400_000L
 
-private fun sampleForest(): List<TaskNode> {
+private fun sampleForest(): List<ItemNode> {
     val today = epochDay * 86_400_000L
     fun d(n: Int) = today + n * 86_400_000L
-    fun task(title: String, due: Int, subs: List<TaskNode> = emptyList()) = TaskNode(title = title, dueDate = d(due), subtasks = subs)
+    fun task(title: String, due: Int, subs: List<ItemNode> = emptyList()) =
+        ItemNode(title = title, item = Item.Task(dueDate = d(due)), children = subs)
     return listOf(
         task("Work", 0, listOf(
             task("Sprint review", 0),

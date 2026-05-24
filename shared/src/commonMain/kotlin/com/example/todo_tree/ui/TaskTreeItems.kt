@@ -1,6 +1,7 @@
 // =============================================================================
 //  TASK_TREE_ITEMS.KT
-//  TaskRow composable: nesting strips, cursor highlight, checkbox, date labels.
+//  TaskRow composable: nesting strips, cursor highlight, date labels,
+//  TaskState display, Category rules. No checkbox — tap title to edit.
 // =============================================================================
 
 package com.example.todo_tree.ui
@@ -19,6 +20,10 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
+import com.example.todo_tree.currentTimeMillis
+import com.example.todo_tree.model.doDate
+import com.example.todo_tree.model.dueDate
+import com.example.todo_tree.model.isCategory
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,8 +43,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.todo_tree.currentTimeMillis
-import com.example.todo_tree.model.TaskNode
+import com.example.todo_tree.model.Item
+import com.example.todo_tree.model.ItemNode
+import com.example.todo_tree.model.TaskState
 
 val stripPalette = listOf(
     Color(0xFF569CD6), Color(0xFF6A9955), Color(0xFFD7BA7D),
@@ -49,8 +55,25 @@ val stripPalette = listOf(
 // ==== Task Row ====
 
 @Composable
-fun TaskRow(task: TaskNode, strips: List<Color>, hasChildren: Boolean, isExpanded: Boolean,
-    isCursor: Boolean, alpha: Float, onToggle: () -> Unit, onToggleDone: () -> Unit, onEdit: () -> Unit) {
+fun TaskRow(node: ItemNode, strips: List<Color>, hasChildren: Boolean, isExpanded: Boolean,
+    isCursor: Boolean, alpha: Float, onToggle: () -> Unit, onEdit: () -> Unit,
+    waitingBadge: @Composable (() -> Unit)? = null) {
+
+    val titleColor = when {
+        node.isCategory -> MaterialTheme.colorScheme.onSurfaceVariant
+        node.item is Item.Project -> MaterialTheme.colorScheme.onSurfaceVariant
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    val isDone = when (val i = node.item) {
+        is Item.Task -> i.state is TaskState.Done
+        is Item.Project -> i.state is TaskState.Done
+        is Item.Category -> false
+    }
+    val isWaiting = when (val i = node.item) {
+        is Item.Task -> i.state is TaskState.Waiting
+        else -> false
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth().height(40.dp).graphicsLayer { this.alpha = alpha }
             .then(if (isCursor) Modifier.border(1.dp, Color(0xFF569CD6)) else Modifier)
@@ -59,22 +82,26 @@ fun TaskRow(task: TaskNode, strips: List<Color>, hasChildren: Boolean, isExpande
     ) {
         strips.forEach { color -> Box(Modifier.width(4.dp).fillMaxHeight().background(color)) }
         Spacer(Modifier.width(6.dp))
-        if (!hasChildren) {
-            Box(Modifier.size(20.dp)
-                .border(1.5.dp, if (task.isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, CircleShape)
-                    .background(if (task.isCompleted) MaterialTheme.colorScheme.primary else Color.Transparent, CircleShape)
-                .clickable(onClick = onToggleDone), contentAlignment = Alignment.Center) {
-                if (task.isCompleted) Icon(Icons.Filled.Check, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(14.dp))
-            }
-        } else {
-            Spacer(Modifier.width(20.dp))
-        }
-        Spacer(Modifier.width(4.dp))
-        Text(task.title, modifier = Modifier.weight(1f).clickable(onClick = onEdit),
-            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
+        Text(node.title, modifier = Modifier.weight(1f).clickable(onClick = onEdit),
+            textDecoration = if (isDone) TextDecoration.LineThrough else TextDecoration.None,
+            color = if (isDone) MaterialTheme.colorScheme.onSurfaceVariant else titleColor,
             style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (task.dueDate != null) { Spacer(Modifier.width(6.dp)); Text(relativeDate(task.dueDate), modifier = Modifier.clickable(onClick = onEdit), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, maxLines = 1) }
-        else if (task.doDate != null) { Spacer(Modifier.width(6.dp)); Text(relativeDate(task.doDate), modifier = Modifier.clickable(onClick = onEdit), style = MaterialTheme.typography.bodyMedium, color = Color(0xFF6A9955), maxLines = 1) }
+        if (isWaiting) {
+            Spacer(Modifier.width(4.dp))
+            Box(Modifier.background(Color(0xFFF9A825).copy(alpha = 0.2f), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                Text("Waiting", style = MaterialTheme.typography.labelSmall, color = Color(0xFFF9A825))
+            }
+        }
+        if (node.dueDate != null) {
+            Spacer(Modifier.width(6.dp))
+            Text(relativeDate(node.dueDate!!), modifier = Modifier.clickable(onClick = onEdit),
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, maxLines = 1)
+        }
+        if (!node.isCategory && node.doDate != null && node.dueDate == null) {
+            Spacer(Modifier.width(6.dp))
+            Text(relativeDate(node.doDate!!), modifier = Modifier.clickable(onClick = onEdit),
+                style = MaterialTheme.typography.bodyMedium, color = Color(0xFF6A9955), maxLines = 1)
+        }
         Spacer(Modifier.width(4.dp))
         if (hasChildren) {
             Box(Modifier.size(28.dp).clickable(onClick = onToggle), contentAlignment = Alignment.Center) {
@@ -92,6 +119,7 @@ fun TaskRow(task: TaskNode, strips: List<Color>, hasChildren: Boolean, isExpande
 fun EditingTaskRow(
     title: String,
     onTitleChange: (String) -> Unit,
+    item: Item,
     doDate: Long?,
     dueDate: Long?,
     onDoDateClick: () -> Unit,
@@ -103,6 +131,9 @@ fun EditingTaskRow(
     strips: List<Color>,
     visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
+    val isCategory = item is Item.Category
+    val isProject = item is Item.Project
+
     Column {
         Row(
             modifier = Modifier.fillMaxWidth().height(40.dp),
@@ -140,28 +171,32 @@ fun EditingTaskRow(
         ) {
             strips.forEach { color -> Box(Modifier.width(4.dp).fillMaxHeight().background(color)) }
             Spacer(Modifier.width(6.dp))
-            Text("Do:", style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.width(8.dp))
-            FilterChip(
-                selected = doDate != null,
-                onClick = onDoDateClick,
-                label = { Text(doDate?.let { formatDate(it) } ?: "none", style = MaterialTheme.typography.bodyMedium) },
-            )
-            if (doDate != null) {
-                Spacer(Modifier.width(4.dp))
-                TextButton(onClick = onClearDoDate, contentPadding = PaddingValues(horizontal = 4.dp)) { Text("clear", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+            if (!isProject && !isCategory) {
+                Text("Do:", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.width(8.dp))
+                FilterChip(
+                    selected = doDate != null,
+                    onClick = onDoDateClick,
+                    label = { Text(doDate?.let { formatDate(it) } ?: "none", style = MaterialTheme.typography.bodyMedium) },
+                )
+                if (doDate != null) {
+                    Spacer(Modifier.width(4.dp))
+                    TextButton(onClick = onClearDoDate, contentPadding = PaddingValues(horizontal = 4.dp)) { Text("clear", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                }
+                Spacer(Modifier.width(12.dp))
             }
-            Spacer(Modifier.width(12.dp))
-            Text("Due:", style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.width(8.dp))
-            FilterChip(
-                selected = dueDate != null,
-                onClick = onDueDateClick,
-                label = { Text(dueDate?.let { formatDate(it) } ?: "due", style = MaterialTheme.typography.bodyMedium) },
-            )
-            if (dueDate != null) {
-                Spacer(Modifier.width(4.dp))
-                TextButton(onClick = onClearDueDate, contentPadding = PaddingValues(horizontal = 4.dp)) { Text("clear", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) }
+            if (!isCategory) {
+                Text("Due:", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.width(8.dp))
+                FilterChip(
+                    selected = dueDate != null,
+                    onClick = onDueDateClick,
+                    label = { Text(dueDate?.let { formatDate(it) } ?: "due", style = MaterialTheme.typography.bodyMedium) },
+                )
+                if (dueDate != null) {
+                    Spacer(Modifier.width(4.dp))
+                    TextButton(onClick = onClearDueDate, contentPadding = PaddingValues(horizontal = 4.dp)) { Text("clear", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) }
+                }
             }
         }
     }
