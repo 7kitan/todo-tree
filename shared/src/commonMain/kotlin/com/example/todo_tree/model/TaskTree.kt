@@ -1,3 +1,8 @@
+// =============================================================================
+//  TASK_TREE.KT
+//  Immutable tree operations: add, remove, update, toggle, consolidate.
+// =============================================================================
+
 package com.example.todo_tree.model
 
 object TaskTree {
@@ -16,16 +21,6 @@ object TaskTree {
     fun toggleCompleted(forest: List<TaskNode>, taskId: String): List<TaskNode> {
         val toggled = mapForest(forest, taskId) { it.copy(isCompleted = !it.isCompleted) }
         return consolidate(toggled)
-    }
-
-    // ==== Queries ====
-
-    fun findById(forest: List<TaskNode>, taskId: String): TaskNode? {
-        for (node in forest) {
-            if (node.id == taskId) return node
-            findById(node.subtasks, taskId)?.let { return it }
-        }
-        return null
     }
 
     // ==== Internal ====

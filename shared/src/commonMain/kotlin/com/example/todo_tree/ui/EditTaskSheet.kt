@@ -1,3 +1,8 @@
+// =============================================================================
+//  EDIT_TASK_SHEET.KT
+//  Modal bottom sheet for editing task fields + date picker + date utilities.
+// =============================================================================
+
 package com.example.todo_tree.ui
 
 import androidx.compose.foundation.layout.*

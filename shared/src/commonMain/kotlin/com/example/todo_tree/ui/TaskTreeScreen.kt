@@ -1,3 +1,9 @@
+// =============================================================================
+//  TASK_TREE_SCREEN.KT
+//  Main screen: custom scroll via Animatable, discrete gesture/wheel stepping,
+//  keyboard navigation, auto-expand, cursor-centered viewport.
+// =============================================================================
+
 package com.example.todo_tree.ui
 
 import androidx.compose.animation.core.Animatable
@@ -26,16 +32,15 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
     var cursorIndex by remember { mutableStateOf(0) }
     if (visibleOrder.isNotEmpty() && cursorIndex >= visibleOrder.size) cursorIndex = visibleOrder.size - 1
     var pendingEditId by remember { mutableStateOf<String?>(null) }
-    var addContext by remember { mutableStateOf<String?>(null) }
     var showEdit by remember { mutableStateOf(false) }
     val cursorId = visibleOrder.getOrNull(cursorIndex)?.id
 
     fun moveUp() { if (cursorIndex > 0) cursorIndex-- }
     fun moveDown() { if (cursorIndex < visibleOrder.size - 1) cursorIndex++ }
-    fun moveParent() { if (cursorId != null) findParent(forest, cursorId)?.let { p -> visibleOrder.indexOfFirst { i -> i.id == p.id }.takeIf { it >= 0 }?.let { cursorIndex = it } } }
-    fun moveChild() { if (cursorId != null) findTaskById(forest, cursorId)?.let { t -> if (t.subtasks.isNotEmpty()) { if (t.id !in expanded) expanded = expanded + t.id; visibleOrder.indexOfFirst { it.id == t.subtasks.first().id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } }
-    fun moveLeft() { if (cursorId != null) getSiblings(forest, cursorId).let { s -> val i = s.indexOfFirst { it.id == cursorId }; if (i > 0) visibleOrder.indexOfFirst { it.id == s[i - 1].id }.takeIf { it >= 0 }?.let { cursorIndex = it } } }
-    fun moveRight() { if (cursorId != null) getSiblings(forest, cursorId).let { s -> val i = s.indexOfFirst { it.id == cursorId }; if (i >= 0 && i < s.size - 1) visibleOrder.indexOfFirst { it.id == s[i + 1].id }.takeIf { it >= 0 }?.let { cursorIndex = it } } }
+    fun moveParent() { cursorId?.let { id -> findParent(forest, id)?.let { p -> visibleOrder.indexOfFirst { i -> i.id == p.id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } }
+    fun moveChild() { cursorId?.let { id -> findTaskById(forest, id)?.let { t -> if (t.subtasks.isNotEmpty()) { if (t.id !in expanded) expanded = expanded + t.id; visibleOrder.indexOfFirst { it.id == t.subtasks.first().id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } } }
+    fun moveLeft() { cursorId?.let { id -> getSiblings(forest, id).let { s -> val i = s.indexOfFirst { it.id == id }; if (i > 0) visibleOrder.indexOfFirst { it.id == s[i - 1].id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } }
+    fun moveRight() { cursorId?.let { id -> getSiblings(forest, id).let { s -> val i = s.indexOfFirst { it.id == id }; if (i >= 0 && i < s.size - 1) visibleOrder.indexOfFirst { it.id == s[i + 1].id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } }
 
     val rowH = with(LocalDensity.current) { 40.dp.toPx() }
     val padPx = with(LocalDensity.current) { 8.dp.toPx() }
@@ -67,7 +72,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
             { if (cursorId != null) viewModel.removeTask(cursorId) }, { moveChild() })
     }.clipToBounds().onSizeChanged { vpH = it.height.toFloat() }) {
         if (visibleOrder.isEmpty()) {
-            Text("No tasks — add one below", Modifier.padding(horizontal = 16.dp, vertical = 40.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("No tasks", Modifier.padding(horizontal = 16.dp, vertical = 40.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else Column(Modifier.fillMaxWidth().wrapContentHeight().offset { IntOffset(0, -scrollAnim.value.roundToInt()) }
             .pointerInput(Unit) { detectDragGestures(onDragEnd = { accY = 0f; accX = 0f }, onDragCancel = { accY = 0f; accX = 0f }, onDrag = { ch, da -> ch.consume(); accY += da.y; accX += da.x; if (accY > thr) { moveUp(); accY = 0f }; if (accY < -thr) { moveDown(); accY = 0f }; if (accX > thr) { moveChild(); accX = 0f }; if (accX < -thr) { moveParent(); accX = 0f } }) }
             .pointerInput(Unit) { awaitPointerEventScope { while (true) { val e = awaitPointerEvent(); val s = e.changes.firstOrNull()?.scrollDelta ?: continue; if (s.y < 0f) moveDown() else if (s.y > 0f) moveUp() } } }

@@ -1,3 +1,8 @@
+// =============================================================================
+//  APP.KT
+//  Root composable: MaterialTheme with IBM Plex Mono + TaskTreeScreen.
+// =============================================================================
+
 package com.example.todo_tree
 
 import androidx.compose.foundation.layout.fillMaxSize

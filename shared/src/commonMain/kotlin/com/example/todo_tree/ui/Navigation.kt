@@ -1,3 +1,9 @@
+// =============================================================================
+//  NAVIGATION.KT
+//  Tree walk helpers: visible-order flattening, find, parent, siblings, key
+//  dispatch.
+// =============================================================================
+
 package com.example.todo_tree.ui
 
 import androidx.compose.ui.input.key.Key

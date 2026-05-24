@@ -1,3 +1,8 @@
+// =============================================================================
+//  TASK_NODE.KT
+//  Core data class with auto-increment id generator.
+// =============================================================================
+
 package com.example.todo_tree.model
 
 data class TaskNode(

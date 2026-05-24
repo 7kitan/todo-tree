@@ -1,3 +1,8 @@
+// =============================================================================
+//  TASK_TREE_ITEMS.KT
+//  TaskRow composable: nesting strips, cursor highlight, checkbox, date labels.
+// =============================================================================
+
 package com.example.todo_tree.ui
 
 import androidx.compose.foundation.background

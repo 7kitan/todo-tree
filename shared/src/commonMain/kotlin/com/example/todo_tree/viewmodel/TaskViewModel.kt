@@ -1,3 +1,8 @@
+// =============================================================================
+//  TASK_VIEW_MODEL.KT
+//  ViewModel holding forest StateFlow + 15-item sample with due dates.
+// =============================================================================
+
 package com.example.todo_tree.viewmodel
 
 import androidx.lifecycle.ViewModel
