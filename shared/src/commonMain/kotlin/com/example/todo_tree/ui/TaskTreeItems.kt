@@ -88,8 +88,8 @@ fun TaskRow(node: ItemNode, strips: List<Color>, hasChildren: Boolean, isExpande
             style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (isWaiting) {
             Spacer(Modifier.width(4.dp))
-            Box(Modifier.background(Color(0xFFF9A825).copy(alpha = 0.2f), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                Text("Waiting", style = MaterialTheme.typography.labelSmall, color = Color(0xFFF9A825))
+            Box(Modifier.background(Color(0xFFFFC107), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                Text("Waiting", style = MaterialTheme.typography.labelSmall, color = Color(0xFF1C1B1F))
             }
         }
         if (node.dueDate != null) {

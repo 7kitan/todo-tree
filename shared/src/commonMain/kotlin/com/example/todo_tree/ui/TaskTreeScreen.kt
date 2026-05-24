@@ -146,10 +146,8 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
     LaunchedEffect(cursorIndex, vpH) {
         if (vpH <= 0f || pendingRemovals.isNotEmpty()) return@LaunchedEffect
         scrollAnim.animateTo(cursorIndex * rowH + padPx + rowH / 2f - vpH * 0.5f, tween(200))
-    }
-    LaunchedEffect(cursorIndex) {
+        delay(100)
         val id = cursorId ?: return@LaunchedEffect; val node = findTaskById(forest, id) ?: return@LaunchedEffect
-        delay(1000)
         if (node.children.isNotEmpty() && node.id !in expanded) expanded = expanded + node.id
         val ne = expanded.filter { eid ->
             if (eid == id) return@filter true
