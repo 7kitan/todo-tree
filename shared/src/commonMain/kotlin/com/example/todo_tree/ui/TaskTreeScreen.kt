@@ -67,6 +67,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
     val cursorId = visibleOrder.getOrNull(cursorIndex)?.id
     var screenHeight by remember { mutableFloatStateOf(0f) }
     var deleteTargetId by remember { mutableStateOf<String?>(null) }
+    var swipeResetCounter by remember { mutableIntStateOf(0) }
 
     // ==== Edit helpers ====
 
@@ -122,6 +123,15 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
         }
     }
 
+    // ==== Reset swipe/edit on cursor change ====
+
+    LaunchedEffect(cursorIndex) {
+        if (cursorIndex >= 0) {
+            swipeResetCounter++
+            editingId = null
+        }
+    }
+
     // ==== Cursor navigation ====
 
     fun moveUp() { if (cursorIndex > 0) cursorIndex-- }
@@ -155,6 +165,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
     // ==== Gesture thresholds ====
 
     var accY by remember { mutableStateOf(0f) }
+    var dragStartY by remember { mutableFloatStateOf(0f) }
     val thr = rowH * 0.3f
 
     // ==== Main layout ====
@@ -170,7 +181,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                 if (visibleOrder.isEmpty()) {
                     Text("No tasks", Modifier.padding(horizontal = 16.dp, vertical = 40.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else Column(Modifier.fillMaxWidth().wrapContentHeight().offset { IntOffset(0, -scrollAnim.value.roundToInt()) }
-                    .pointerInput(visibleOrder.size) { detectDragGestures(onDragEnd = { accY = 0f }, onDragCancel = { accY = 0f }, onDrag = { ch, da -> ch.consume(); accY += da.y; if (abs(accY) > thr) { if (accY > thr) { moveUp(); accY = 0f }; if (accY < -thr) { moveDown(); accY = 0f } } }) }
+                    .pointerInput(visibleOrder.size) { detectDragGestures(onDragStart = { dragStartY = it.y }, onDragEnd = { if (abs(accY) < thr * 0.5f && dragStartY > screenHeight * 0.75f) swipeResetCounter++; accY = 0f }, onDragCancel = { accY = 0f }, onDrag = { ch, da -> ch.consume(); accY += da.y; if (abs(accY) > thr) { if (accY > thr) { moveUp(); accY = 0f }; if (accY < -thr) { moveDown(); accY = 0f } } }) }
                     .pointerInput(visibleOrder.size) { awaitPointerEventScope { while (true) { val e = awaitPointerEvent(); val s = e.changes.firstOrNull()?.scrollDelta ?: continue; if (s.y < 0f) moveDown() else if (s.y > 0f) moveUp() } } }
                     .padding(top = 8.dp, bottom = 8.dp)) {
                     visibleOrder.forEachIndexed { i, item ->
@@ -240,6 +251,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                                                 viewModel.updateTask(node.id, node.title, taskItem.copy(state = newState))
                                             },
                                             onDelete = { deleteTargetId = node.id },
+                                            resetCount = swipeResetCounter,
                                             enabled = true,
                                             modifier = Modifier.fillMaxWidth(),
                                             content = rowContent,
