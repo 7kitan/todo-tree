@@ -47,4 +47,3 @@ shared/src/commonMain/kotlin/com/example/todo_tree/
 - **Desktop**: `./gradlew :shared:jvmTest`
 - **Android host**: `./gradlew :shared:testAndroidHostTest`
 - **Web (Wasm)**: `./gradlew :shared:wasmJsTest`
-- **Web (JS)**: `./gradlew :shared:jsTest`
