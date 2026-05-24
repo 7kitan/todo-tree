@@ -2,7 +2,7 @@
 
 > **AI-generated code notice:** This project was written with the assistance of a large language model (DeepSeek V4 Flash).
 
-<img src="screenshots/Screenshot_20260524_140227.png" alt="App screenshot" width="600"/>
+<img src="screenshots/Screenshot_20260524_140227.png" alt="App screenshot" width="250"/>
 
 Task manager with infinite nested subtrees, keyboard-first navigation, and due-date constraints.
 
