@@ -53,12 +53,12 @@ fun flattenVisible(forest: List<ItemNode>, expanded: Set<String>, searchQuery: S
         }
     }
 
-    fun walk(nodes: List<ItemNode>, depth: Int) {
+    fun walk(nodes: List<ItemNode>, depth: Int, showAll: Boolean = false) {
         for (node in nodes) {
-            val show = node.id in matchIds || node.id in ancestorIds
+            val show = showAll || node.id in matchIds || node.id in ancestorIds
             if (show) {
                 result.add(VisibleItem(node.id, depth))
-                walk(node.children, depth + 1)
+                walk(node.children, depth + 1, showAll || node.id in matchIds)
             }
         }
     }
