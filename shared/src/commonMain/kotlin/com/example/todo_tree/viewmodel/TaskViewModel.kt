@@ -1,19 +1,39 @@
 // =============================================================================
 //  TASK_VIEW_MODEL.KT
-//  ViewModel holding forest StateFlow + ~60-item sample with due dates.
+//  ViewModel holding forest StateFlow + persistence (load on init, auto-save
+//  on mutation with debounce).
+//
+//  Persistence design:
+//    - Load: on init, read JSON from PlatformStorage, deserialize, fall back
+//      to sampleForest() if null or on parse error.
+//    - Save: collect _forest flow in viewModelScope with 500ms debounce.
+//      Serialize to pretty-printed JSON and write via PlatformStorage.
+//    - Why debounce: rapid mutations (e.g., moving items through keyboard)
+//      would cause N serializations per second. 500ms batch window avoids
+//      thrashing while preserving data on close (last write wins).
+//    - Why pretty-print: human-readable, easy to debug, diffable in git.
 // =============================================================================
 
 package com.example.todo_tree.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.todo_tree.currentTimeMillis
 import com.example.todo_tree.model.*
+import com.example.todo_tree.persistence.PlatformStorage
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
+@OptIn(FlowPreview::class)
 class TaskViewModel : ViewModel() {
-    private val _forest = MutableStateFlow(sampleForest())
+    private val json = Json { prettyPrint = true }
+
+    private val _forest = MutableStateFlow(loadForest())
     val forest: StateFlow<List<ItemNode>> = _forest.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
@@ -26,6 +46,28 @@ class TaskViewModel : ViewModel() {
 
     private val undoManager = UndoManager()
     private val __inbox__ = "__inbox__"
+
+    init {
+        // Auto-save forest on every mutation, debounced to 500ms
+        viewModelScope.launch {
+            _forest.debounce(500).collect { forest ->
+                val encoded = json.encodeToString(forest)
+                PlatformStorage.write(encoded)
+            }
+        }
+    }
+
+    private fun loadForest(): List<ItemNode> {
+        val stored = PlatformStorage.read()
+        if (stored != null) {
+            return try {
+                json.decodeFromString<List<ItemNode>>(stored)
+            } catch (_: Exception) {
+                sampleForest()
+            }
+        }
+        return sampleForest()
+    }
 
     fun setSearchQuery(query: String) { _searchQuery.value = query }
 

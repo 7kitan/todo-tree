@@ -31,6 +31,7 @@ Task manager with infinite nested subtrees, keyboard-first navigation, NLP date 
 - **Inbox as default**: Stray tasks and unresolved references default to Inbox (immutable category)
 - **Custom theming**: Primary colors, IBM Plex Mono typography
 - **Record-style FAB**: Large 80dp bottom-center button for adding tasks
+- **Local persistence**: Forest auto-saves to disk/localStorage as pretty-printed JSON with 500ms debounce
 
 ## Project Structure
 
@@ -42,18 +43,30 @@ shared/src/
 │   ├── model/
 │   │   ├── TaskNode.kt     # Core data classes: ItemNode, Item, TaskState
 │   │   └── TaskTree.kt     # Immutable tree operations
+│   ├── persistence/
+│   │   └── PlatformStorage.kt  # expect object: read/write forest JSON
 │   ├── viewmodel/
-│   │   └── TaskViewModel.kt # State holder + comprehensive sample forest
+│   │   └── TaskViewModel.kt    # State holder + load/save on mutation
 │   └── ui/
-│       ├── TaskTreeScreen.kt  # Main screen: scroll, keyboard, swipe, add/search, dropdowns
-│       ├── TaskTreeItems.kt   # TaskRow, EditingTaskRow, InputTaskRow, TodayBar
-│       ├── DateParser.kt      # NLP date parsing, #token scanning, live highlighting
-│       ├── Navigation.kt      # Tree traversal, fuzzy search, breadcrumbs, keyboard dispatch
-│       ├── SwipeActionsRow.kt # Overlay swipe with directional guard
-│       ├── TaskFab.kt         # Single FAB button
-│       └── EditTaskSheet.kt   # Modal bottom sheet (legacy)
-├── wasmJsMain/             # Wasm-specific (currentTimeMillis impl)
-├── jvmMain/                # JVM-specific (currentTimeMillis impl)
+│       ├── TaskTreeScreen.kt   # Main screen: scroll, keyboard, swipe, add/search, dropdowns
+│       ├── TaskTreeItems.kt    # TaskRow, EditingTaskRow, InputTaskRow, TodayBar
+│       ├── DateParser.kt       # NLP date parsing, #token scanning, live highlighting
+│       ├── Navigation.kt       # Tree traversal, fuzzy search, breadcrumbs, keyboard dispatch
+│       ├── SwipeActionsRow.kt  # Overlay swipe with directional guard
+│       ├── TaskFab.kt          # Single FAB button
+│       └── EditTaskSheet.kt    # Modal bottom sheet (legacy)
+├── jvmMain/kotlin/com/example/todo_tree/
+│   ├── TimeUtil.jvm.kt         # JVM currentTimeMillis (System.currentTimeMillis)
+│   └── persistence/
+│       └── PlatformStorage.jvm.kt  # JVM: ~/.todo-tree/forest.json
+├── wasmJsMain/kotlin/com/example/todo_tree/
+│   ├── TimeUtil.wasmJs.kt      # Wasm currentTimeMillis (js Date.now())
+│   └── persistence/
+│       └── PlatformStorage.wasmJs.kt  # Wasm: window.localStorage
+├── androidMain/kotlin/com/example/todo_tree/
+│   ├── TimeUtil.android.kt     # Android currentTimeMillis
+│   └── persistence/
+│       └── PlatformStorage.android.kt  # Android: Context.filesDir/forest.json
 ├── jvmTest/
 ├── androidMain/            # Android-specific (currentTimeMillis impl)
 └── androidHostTest/
@@ -79,6 +92,8 @@ webApp/src/
 | kotest-framework-engine | `^6.1.11` | Multiplatform test engine | https://kotest.io/docs/framework/project-setup.html |
 | kotest-gradle-plugin | `^6.1.11` | KMP test engine registration | https://kotest.io/docs/framework/project-setup.html |
 | ksp | `^2.3.8` | Kotlin Symbol Processing (required by Kotest plugin) | https://github.com/google/ksp |
+| kotlin-serialization | `2.3.21` | Plugin: @Serializable code gen | https://kotlinlang.org/docs/serialization.html |
+| kotlinx-serialization-json | `^1.8.1` | JSON serialization for persistence (forest save/load) | https://kotlinlang.org/docs/serialization.html |
 
 ## Command Syntax
 

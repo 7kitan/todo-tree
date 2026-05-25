@@ -13,6 +13,7 @@ composeMultiplatform = "1.11.0"
 kotlin = "2.3.21"
 kotlinx-coroutines = "1.11.0"
 kotlinx-datetime = "0.6.2"
+kotlinx-serialization = "1.8.1"
 kotest = "6.1.11"
 kotest-gradlePlugin = "6.1.11"
 ksp = "2.3.8"
@@ -39,6 +40,7 @@ kotlinx-coroutinesSwing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-s
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
 kotest-framework-engine = { module = "io.kotest:kotest-framework-engine", version.ref = "kotest" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -47,5 +49,6 @@ composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMul
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotest = { id = "io.kotest", version.ref = "kotest-gradlePlugin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
