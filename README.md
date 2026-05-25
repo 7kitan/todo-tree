@@ -11,6 +11,14 @@
 
 Task manager with infinite nested subtrees, keyboard-first navigation, NLP date parsing, `#` command syntax, swipe actions, and Inbox-centric organization.
 
+## Design References
+
+| App | Borrowed ideas |
+|-----|---------------|
+| [Todoist](https://todoist.com) | Quick-add NLP, `#` command syntax, natural language date parsing, hierarchical projects |
+| [Things 3](https://culturedcode.com/things) | Clean hierarchy, swipe actions, start/due date distinction, Inbox as default capture zone |
+| [NotePlan](https://noteplan.co) | Markdown-rich tasks, daily/weekly notes linked to calendar, bi-directional backlinks, offline-first persistence |
+
 ## Features
 
 - **Three item types**: Task (swipeable, independent completion), Project (auto-completes when children done), Category (organizational, never completes)
