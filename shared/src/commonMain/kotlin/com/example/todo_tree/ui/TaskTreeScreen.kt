@@ -45,6 +45,7 @@ import com.example.todo_tree.viewmodel.TaskViewModel
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private val animDuration = 250
 
@@ -153,10 +154,20 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
     fun moveLeft() { cursorId?.let { id -> getSiblings(forest, id).let { s -> val i = s.indexOfFirst { it.id == id }; if (i > 0) visibleOrder.indexOfFirst { it.id == s[i - 1].id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } }
     fun moveRight() { cursorId?.let { id -> getSiblings(forest, id).let { s -> val i = s.indexOfFirst { it.id == id }; if (i >= 0 && i < s.size - 1) visibleOrder.indexOfFirst { it.id == s[i + 1].id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } }
 
+    // ==== Gesture thresholds ====
+
+    var dragOffset by remember { mutableStateOf(0f) }
+    var scrollAcc by remember { mutableFloatStateOf(0f) }
+    var dragStartY by remember { mutableFloatStateOf(0f) }
+    val scope = rememberCoroutineScope()
+    var isDragging by remember { mutableStateOf(false) }
+    val thr = rowH * 1.0f
+    val scrollThr = rowH * 0.4f
+
     // ==== Auto-scroll & auto-expand ====
 
-    LaunchedEffect(cursorIndex, vpH) {
-        if (vpH <= 0f || pendingRemovals.isNotEmpty()) return@LaunchedEffect
+    LaunchedEffect(cursorIndex, vpH, isDragging) {
+        if (vpH <= 0f || pendingRemovals.isNotEmpty() || isDragging) return@LaunchedEffect
         scrollAnim.animateTo(cursorIndex * rowH + padPx + rowH / 2f - vpH * 0.5f, tween(200))
         delay(100)
         val id = cursorId ?: return@LaunchedEffect; val node = findTaskById(forest, id) ?: return@LaunchedEffect
@@ -171,14 +182,6 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
     }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(inputMode) { if (inputMode != null) focusRequester.requestFocus() }
-
-    // ==== Gesture thresholds ====
-
-    var accY by remember { mutableStateOf(0f) }
-    var scrollAcc by remember { mutableFloatStateOf(0f) }
-    var dragStartY by remember { mutableFloatStateOf(0f) }
-    val thr = rowH * 0.5f
-    val scrollThr = rowH * 0.4f
 
     // ==== Main layout ====
 
@@ -200,7 +203,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
                 if (visibleOrder.isEmpty()) {
                     Text("No tasks", Modifier.padding(horizontal = 16.dp, vertical = 40.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else Column(Modifier.fillMaxWidth().wrapContentHeight().offset { IntOffset(0, -scrollAnim.value.roundToInt()) }
-                    .pointerInput(visibleOrder.size) { detectDragGestures(onDragStart = { dragStartY = it.y }, onDragEnd = { if (abs(accY) < thr * 0.5f && dragStartY > screenHeight * 0.75f) swipeResetCounter++; accY = 0f }, onDragCancel = { accY = 0f }, onDrag = { ch, da -> ch.consume(); accY += da.y; if (abs(accY) > thr) { if (accY > thr) { moveUp(); accY = 0f }; if (accY < -thr) { moveDown(); accY = 0f } } }) }
+                    .pointerInput(visibleOrder.size) { detectDragGestures(onDragStart = { dragStartY = it.y; scope.launch { scrollAnim.snapTo(scrollAnim.value) }; isDragging = true; dragOffset = 0f }, onDragEnd = { if (abs(dragOffset) < thr * 0.5f && dragStartY > screenHeight * 0.75f) swipeResetCounter++; isDragging = false; dragOffset = 0f }, onDragCancel = { isDragging = false; dragOffset = 0f }, onDrag = { ch, da -> ch.consume(); scope.launch { scrollAnim.snapTo(scrollAnim.value - da.y) }; dragOffset += da.y; if (abs(dragOffset) > thr) { if (dragOffset > thr) { moveUp(); dragOffset -= thr }; if (dragOffset < -thr) { moveDown(); dragOffset += thr } } }) }
                     .pointerInput(visibleOrder.size) { awaitPointerEventScope { while (true) { val e = awaitPointerEvent(); val s = e.changes.firstOrNull()?.scrollDelta ?: continue; scrollAcc += s.y; if (scrollAcc > scrollThr) { moveDown(); scrollAcc = 0f }; if (scrollAcc < -scrollThr) { moveUp(); scrollAcc = 0f } } } }
                     .padding(top = 8.dp, bottom = 8.dp)) {
                     visibleOrder.forEachIndexed { i, item ->
