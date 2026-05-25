@@ -2,6 +2,11 @@
 
 > **AI-generated code notice:** This project was written with the assistance of a large language model (DeepSeek V4 Flash).
 
+[![CI](https://img.shields.io/github/actions/workflow/status/7kitan/todo-tree/ci.yml?style=flat-square&branch=main&label=CI)](https://github.com/7kitan/todo-tree/actions)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?style=flat-square&logo=kotlin)](https://kotlinlang.org)
+[![Compose Multiplatform](https://img.shields.io/badge/Compose_Multiplatform-1.11.0-4285F4?style=flat-square&logo=jetpackcompose)](https://www.jetbrains.com/lp/compose-multiplatform/)
+[![Platform](https://img.shields.io/badge/Platform-Android%20|%20Desktop%20|%20Web-4CAF50?style=flat-square)]()
+
 <table>
   <tr>
     <td><img src="screenshots/SCR-20260525-bekm.png" alt="Mobile screenshot" width="100%"/></td>
