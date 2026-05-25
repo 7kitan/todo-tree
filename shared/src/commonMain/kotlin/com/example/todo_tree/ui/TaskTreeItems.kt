@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import com.example.todo_tree.LocalDarkMode
 import com.example.todo_tree.currentTimeMillis
 import com.example.todo_tree.model.doDate
 import com.example.todo_tree.model.dueDate
@@ -78,10 +79,11 @@ fun TaskRow(node: ItemNode, strips: List<Color>, hasChildren: Boolean, isExpande
         else -> false
     }
 
+    val darkMode = LocalDarkMode.current
     Row(
         modifier = Modifier.fillMaxWidth().height(40.dp).graphicsLayer { this.alpha = alpha }
                 .then(if (isCursor) Modifier.border(1.dp, MaterialTheme.colorScheme.primary) else Modifier)
-            .background(if (isCursor) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent),
+            .background(if (isCursor && darkMode.value) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         strips.forEach { color -> Box(Modifier.width(4.dp).fillMaxHeight().background(color)) }
