@@ -23,15 +23,27 @@ actual object PlatformStorage {
         storageDir = context.filesDir
     }
 
-    private val file: File
+    private val forestFile: File
         get() {
             val dir = storageDir
                 ?: error("PlatformStorage.init(context) must be called before use")
             return File(dir, "forest.json")
         }
 
-    actual fun write(json: String) = file.writeText(json)
+    private val settingsFile: File
+        get() {
+            val dir = storageDir
+                ?: error("PlatformStorage.init(context) must be called before use")
+            return File(dir, "settings.json")
+        }
+
+    actual fun write(json: String) = forestFile.writeText(json)
 
     actual fun read(): String? =
-        if (file.exists()) file.readText() else null
+        if (forestFile.exists()) forestFile.readText() else null
+
+    actual fun writeSettings(json: String) = settingsFile.writeText(json)
+
+    actual fun readSettings(): String? =
+        if (settingsFile.exists()) settingsFile.readText() else null
 }

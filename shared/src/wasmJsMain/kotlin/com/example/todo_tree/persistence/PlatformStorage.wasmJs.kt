@@ -21,11 +21,18 @@ private external fun setItem(key: String, value: String)
 
 @OptIn(ExperimentalWasmJsInterop::class)
 actual object PlatformStorage {
-    private const val KEY = "todo-tree-forest"
+    private const val FOREST_KEY = "todo-tree-forest"
+    private const val SETTINGS_KEY = "todo-tree-settings"
 
     actual fun write(json: String) {
-        setItem(KEY, json)
+        setItem(FOREST_KEY, json)
     }
 
-    actual fun read(): String? = getItem(KEY)
+    actual fun read(): String? = getItem(FOREST_KEY)
+
+    actual fun writeSettings(json: String) {
+        setItem(SETTINGS_KEY, json)
+    }
+
+    actual fun readSettings(): String? = getItem(SETTINGS_KEY)
 }

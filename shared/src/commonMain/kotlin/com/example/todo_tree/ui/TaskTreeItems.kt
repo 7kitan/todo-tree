@@ -19,7 +19,9 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Search
+import com.example.todo_tree.LocalDarkMode
 import com.example.todo_tree.currentTimeMillis
 import com.example.todo_tree.model.doDate
 import com.example.todo_tree.model.dueDate
@@ -77,10 +79,11 @@ fun TaskRow(node: ItemNode, strips: List<Color>, hasChildren: Boolean, isExpande
         else -> false
     }
 
+    val darkMode = LocalDarkMode.current
     Row(
         modifier = Modifier.fillMaxWidth().height(40.dp).graphicsLayer { this.alpha = alpha }
-            .then(if (isCursor) Modifier.border(1.dp, Color(0xFF569CD6)) else Modifier)
-            .background(if (isCursor) Color(0x18FFFFFF) else Color.Transparent),
+                .then(if (isCursor) Modifier.border(1.dp, MaterialTheme.colorScheme.primary) else Modifier)
+            .background(if (isCursor && darkMode.value) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         strips.forEach { color -> Box(Modifier.width(4.dp).fillMaxHeight().background(color)) }
@@ -221,7 +224,7 @@ fun EditingTaskRow(
 // ==== Today Bar ====
 
 @Composable
-fun TodayBar(onSearchClick: () -> Unit = {}) {
+fun TodayBar(onSearchClick: () -> Unit = {}, onThemeToggle: () -> Unit = {}) {
     val now = currentTimeMillis()
     val todayDays = now / 86_400_000L
     val dayNames = arrayOf("Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed")
@@ -241,6 +244,9 @@ fun TodayBar(onSearchClick: () -> Unit = {}) {
         )
         Box(Modifier.size(28.dp).clickable(onClick = onSearchClick), contentAlignment = Alignment.Center) {
             Icon(Icons.Filled.Search, "Search", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        }
+        Box(Modifier.size(28.dp).clickable(onClick = onThemeToggle), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.DarkMode, "Toggle theme", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(4.dp))
     }

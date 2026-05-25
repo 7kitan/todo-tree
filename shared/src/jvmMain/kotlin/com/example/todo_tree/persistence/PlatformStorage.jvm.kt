@@ -10,14 +10,18 @@ package com.example.todo_tree.persistence
 import java.io.File
 
 actual object PlatformStorage {
-    // Use also { mkdirs() } on init so the directory exists before first write
-    private val file = File(
-        System.getProperty("user.home"),
-        ".todo-tree/forest.json"
-    ).also { it.parentFile.mkdirs() }
+    private val dir = File(System.getProperty("user.home"), ".todo-tree")
+        .also { it.mkdirs() }
+    private val forestFile = File(dir, "forest.json")
+    private val settingsFile = File(dir, "settings.json")
 
-    actual fun write(json: String) = file.writeText(json)
+    actual fun write(json: String) = forestFile.writeText(json)
 
     actual fun read(): String? =
-        if (file.exists()) file.readText() else null
+        if (forestFile.exists()) forestFile.readText() else null
+
+    actual fun writeSettings(json: String) = settingsFile.writeText(json)
+
+    actual fun readSettings(): String? =
+        if (settingsFile.exists()) settingsFile.readText() else null
 }
