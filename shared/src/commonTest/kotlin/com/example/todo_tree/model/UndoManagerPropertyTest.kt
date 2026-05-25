@@ -18,11 +18,10 @@ import com.example.todo_tree.arbForest
 import com.example.todo_tree.collectTaskIds
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.property.checkAll
 import io.kotest.property.arbitrary.int
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 class UndoManagerPropertyTest : FunSpec({
 
@@ -50,7 +49,7 @@ class UndoManagerPropertyTest : FunSpec({
                 AddRootTask("undo_test", Item.Task()), forest
             )
             val afterUndo = mgr.undo(afterExec.forest)
-            assertNotNull(afterUndo)
+            afterUndo.shouldNotBeNull()
             afterUndo.forest shouldBe forest
         }
     }
@@ -66,19 +65,19 @@ class UndoManagerPropertyTest : FunSpec({
             )
             mgr.undo(afterExec.forest)
             val afterRedo = mgr.redo(forest)
-            assertNotNull(afterRedo)
+            afterRedo.shouldNotBeNull()
             afterRedo.forest shouldBe afterExec.forest
         }
     }
 
     test("undo on empty stack returns null") {
         val mgr = UndoManager()
-        mgr.undo(emptyList()) shouldBe null
+        mgr.undo(emptyList()).shouldBeNull()
     }
 
     test("redo on empty stack returns null") {
         val mgr = UndoManager()
-        mgr.redo(emptyList()) shouldBe null
+        mgr.redo(emptyList()).shouldBeNull()
     }
 
     test("new action after undo clears redo stack") {
@@ -89,7 +88,7 @@ class UndoManagerPropertyTest : FunSpec({
 
             val afterExec = mgr.execute(AddRootTask("first", Item.Task()), forest)
             val afterUndo = mgr.undo(afterExec.forest)
-            assertNotNull(afterUndo)
+            afterUndo.shouldNotBeNull()
 
             mgr.execute(AddRootTask("second", Item.Task()), afterUndo.forest)
             mgr.canRedo shouldBe false
@@ -108,13 +107,13 @@ class UndoManagerPropertyTest : FunSpec({
 
         // Undo 3 times — should get d, c, b undone
         val u1 = mgr.undo(forest)
-        assertNotNull(u1)
+        u1.shouldNotBeNull()
         val u2 = mgr.undo(u1.forest)
-        assertNotNull(u2)
+        u2.shouldNotBeNull()
         val u3 = mgr.undo(u2.forest)
-        assertNotNull(u3)
+        u3.shouldNotBeNull()
         // a should have been dropped — 4th undo returns null
         val u4 = mgr.undo(u3.forest)
-        assertNull(u4)
+        u4.shouldBeNull()
     }
 })

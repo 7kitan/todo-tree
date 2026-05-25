@@ -29,7 +29,7 @@ import com.example.todo_tree.isNotProject
 import com.example.todo_tree.findNode
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.property.checkAll
-import kotlin.test.assertEquals
+import io.kotest.matchers.shouldBe
 
 class TaskTreePropertyTest : FunSpec({
 
@@ -40,7 +40,7 @@ class TaskTreePropertyTest : FunSpec({
             val (parentId, index, node) = TaskTree.captureLocation(forest, taskId)
             val removed = TaskTree.removeTask(forest, taskId)
             val restored = TaskTree.insertTask(removed, parentId, index, node)
-            assertEquals(forest, restored)
+            restored shouldBe forest
         }
     }
 
@@ -53,7 +53,7 @@ class TaskTreePropertyTest : FunSpec({
             val child = ItemNode(title = "prop_child", item = Item.Task())
             val added = TaskTree.addTask(forest, parentId, child)
             val removed = TaskTree.removeTask(added, child.id)
-            assertEquals(forest, removed)
+            removed shouldBe forest
         }
     }
 
@@ -74,7 +74,7 @@ class TaskTreePropertyTest : FunSpec({
 
             val once = TaskTree.toggleCompleted(forest, taskId)
             val twice = TaskTree.toggleCompleted(once, taskId)
-            assertEquals(forest, twice)
+            twice shouldBe forest
         }
     }
 
@@ -87,7 +87,7 @@ class TaskTreePropertyTest : FunSpec({
             if (catIds.isEmpty()) return@checkAll
             val catId = catIds.first()
             val result = TaskTree.toggleCompleted(forest, catId)
-            assertEquals(forest, result)
+            result shouldBe forest
         }
     }
 
@@ -99,7 +99,7 @@ class TaskTreePropertyTest : FunSpec({
             val taskId = ids.first()
             val up = TaskTree.moveUp(forest, taskId)
             val down = TaskTree.moveDown(up, taskId)
-            assertEquals(forest, down)
+            down shouldBe forest
         }
     }
 
@@ -111,7 +111,7 @@ class TaskTreePropertyTest : FunSpec({
             val taskId = ids.first()
             val down = TaskTree.moveDown(forest, taskId)
             val up = TaskTree.moveUp(down, taskId)
-            assertEquals(forest, up)
+            up shouldBe forest
         }
     }
 
@@ -120,7 +120,7 @@ class TaskTreePropertyTest : FunSpec({
         checkAll(arbForestWithLeftSibling()) { (forest, taskId) ->
             val indented = TaskTree.indent(forest, taskId)
             val outdented = TaskTree.outdent(indented, taskId)
-            assertEquals(forest, outdented)
+            outdented shouldBe forest
         }
     }
 
@@ -139,7 +139,7 @@ class TaskTreePropertyTest : FunSpec({
             val outdented = TaskTree.outdent(forest, taskId)
             val indented = TaskTree.indent(outdented, taskId)
             val restoredParent = TaskTree._findParent(indented, taskId)?.id
-            assertEquals(originalParent, restoredParent)
+            restoredParent shouldBe originalParent
         }
     }
 
@@ -147,7 +147,7 @@ class TaskTreePropertyTest : FunSpec({
     test("moveTo guards against self-move") {
         checkAll(arbForestWithTaskId()) { (forest, taskId) ->
             val result = TaskTree.moveTo(forest, taskId, taskId)
-            assertEquals(forest, result)
+            result shouldBe forest
         }
     }
 
@@ -156,7 +156,7 @@ class TaskTreePropertyTest : FunSpec({
         checkAll(arbForest()) { forest ->
             val once = TaskTree.deleteCompleted(forest)
             val twice = TaskTree.deleteCompleted(once)
-            assertEquals(once, twice)
+            twice shouldBe once
         }
     }
 
@@ -170,9 +170,9 @@ class TaskTreePropertyTest : FunSpec({
             // Check the target node is updated
             val node = collectTaskIds(forest).first { it == taskId }
             val updatedNode = findNode(updated, taskId)!!
-            assertEquals(newTitle, updatedNode.title)
+            updatedNode.title shouldBe newTitle
             // Check other nodes unchanged
-            assertEquals(countNodes(forest), countNodes(updated))
+            countNodes(updated) shouldBe countNodes(forest)
         }
     }
 })

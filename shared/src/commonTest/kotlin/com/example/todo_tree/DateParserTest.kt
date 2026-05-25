@@ -16,10 +16,10 @@ import com.example.todo_tree.ui.dateHighlightTransformation
 import com.example.todo_tree.ui.parseTaskInput
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.property.checkAll
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 
 class DateParserTest : FunSpec({
 
@@ -28,13 +28,13 @@ class DateParserTest : FunSpec({
     test("empty and blank input produce empty title") {
         checkAll(arbString(0, 0)) { input ->
             val r = parseTaskInput(input)
-            assertEquals("", r.title)
-            assertNull(r.doDate)
-            assertNull(r.dueDate)
-            assertNull(r.parentRef)
-            assertNull(r.removeCatTitle)
-            assertNull(r.moveTarget)
-            assertTrue(r.item is Item.Task)
+            r.title shouldBe ""
+            r.doDate.shouldBeNull()
+            r.dueDate.shouldBeNull()
+            r.parentRef.shouldBeNull()
+            r.removeCatTitle.shouldBeNull()
+            r.moveTarget.shouldBeNull()
+            (r.item is Item.Task).shouldBeTrue()
         }
     }
 
@@ -48,48 +48,48 @@ class DateParserTest : FunSpec({
             if (clean.any { it.isDigit() }) return@checkAll
             val r = parseTaskInput(clean)
             // The parser may lowercase, trim, etc.
-            assertEquals(clean.trim(), r.title.trim())
-            assertNull(r.doDate)
-            assertNull(r.dueDate)
-            assertTrue(r.item is Item.Task)
+            r.title.trim() shouldBe clean.trim()
+            r.doDate.shouldBeNull()
+            r.dueDate.shouldBeNull()
+            (r.item is Item.Task).shouldBeTrue()
         }
     }
 
     test("#cat and #category produce Category item") {
         listOf("#cat", "#category", "test #cat", "buy milk #cat").forEach { input ->
             val r = parseTaskInput(input)
-            assertTrue(r.item is Item.Category, "Expected Category for: $input")
+            (r.item is Item.Category).shouldBeTrue()
         }
     }
 
     test("#proj and #project produce Project item") {
         listOf("#proj", "#project", "build app #proj").forEach { input ->
             val r = parseTaskInput(input)
-            assertTrue(r.item is Item.Project, "Expected Project for: $input")
+            (r.item is Item.Project).shouldBeTrue()
         }
     }
 
     test("do today sets doDate") {
         val r = parseTaskInput("test do today")
-        assertNotNull(r.doDate, "doDate should be set with 'do today'")
-        assertEquals("test", r.title.trim())
-        assertTrue(r.item is Item.Task)
+        r.doDate.shouldNotBeNull()
+        r.title.trim() shouldBe "test"
+        (r.item is Item.Task).shouldBeTrue()
     }
 
     test("due tomorrow sets dueDate") {
         val r = parseTaskInput("test due tomorrow")
-        assertNotNull(r.dueDate, "dueDate should be set with 'due tomorrow'")
-        assertEquals("test", r.title.trim())
+        r.dueDate.shouldNotBeNull()
+        r.title.trim() shouldBe "test"
     }
 
     test("do today sets doDate") {
         val r = parseTaskInput("do today")
-        assertNotNull(r.doDate, "doDate should be set")
+        r.doDate.shouldNotBeNull()
     }
 
     test("due fri sets dueDate") {
         val r = parseTaskInput("task due fri")
-        assertNotNull(r.dueDate, "dueDate should be set with 'task due fri'")
+        r.dueDate.shouldNotBeNull()
     }
 
     // ==== Example-based tests for date expression formats ====
@@ -97,41 +97,41 @@ class DateParserTest : FunSpec({
     test("today alias: t") {
         val r1 = parseTaskInput("do t")
         val r2 = parseTaskInput("do today")
-        assertNotNull(r1.doDate)
-        assertNotNull(r2.doDate)
-        assertEquals(r1.doDate, r2.doDate)
+        r1.doDate.shouldNotBeNull()
+        r2.doDate.shouldNotBeNull()
+        r2.doDate shouldBe r1.doDate
     }
 
     test("tomorrow aliases: tmr, tmrw") {
         val r1 = parseTaskInput("do tmr")
         val r2 = parseTaskInput("do tmrw")
         val r3 = parseTaskInput("do tomorrow")
-        assertNotNull(r1.doDate)
-        assertNotNull(r2.doDate)
-        assertNotNull(r3.doDate)
-        assertEquals(r1.doDate, r2.doDate)
-        assertEquals(r1.doDate, r3.doDate)
+        r1.doDate.shouldNotBeNull()
+        r2.doDate.shouldNotBeNull()
+        r3.doDate.shouldNotBeNull()
+        r2.doDate shouldBe r1.doDate
+        r3.doDate shouldBe r1.doDate
     }
 
     test("next week alias: next") {
         val r = parseTaskInput("do next week")
-        assertNotNull(r.doDate)
+        r.doDate.shouldNotBeNull()
     }
 
     test("relative: in 3 days, +5d, +2w") {
         val r1 = parseTaskInput("do in 3 days")
         val r2 = parseTaskInput("do +5d")
         val r3 = parseTaskInput("do +2w")
-        assertNotNull(r1.doDate)
-        assertNotNull(r2.doDate)
-        assertNotNull(r3.doDate)
+        r1.doDate.shouldNotBeNull()
+        r2.doDate.shouldNotBeNull()
+        r3.doDate.shouldNotBeNull()
     }
 
     test("abbreviated relative: 3d, 1w") {
         val r1 = parseTaskInput("do 3d")
         val r2 = parseTaskInput("do 1w")
-        assertNotNull(r1.doDate)
-        assertNotNull(r2.doDate)
+        r1.doDate.shouldNotBeNull()
+        r2.doDate.shouldNotBeNull()
     }
 
     test("weekday names resolve") {
@@ -139,74 +139,74 @@ class DateParserTest : FunSpec({
             "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
         weekdays.forEach { day ->
             val r = parseTaskInput("do $day")
-            assertNotNull(r.doDate) { "doDate should be set for 'do $day'" }
+            r.doDate.shouldNotBeNull() { "doDate should be set for 'do $day'" }
         }
     }
 
     test("absolute date: mar 7, march 7th") {
         val r1 = parseTaskInput("do mar 7")
         val r2 = parseTaskInput("do march 7th")
-        assertNotNull(r1.doDate)
-        assertNotNull(r2.doDate)
+        r1.doDate.shouldNotBeNull()
+        r2.doDate.shouldNotBeNull()
     }
 
     test("reversed date: 7 mar, 7th march") {
         val r1 = parseTaskInput("do 7 mar")
         val r2 = parseTaskInput("do 7th march")
-        assertNotNull(r1.doDate)
-        assertNotNull(r2.doDate)
+        r1.doDate.shouldNotBeNull()
+        r2.doDate.shouldNotBeNull()
     }
 
     // ==== #command syntax tests ====
 
     test("#removecat sets removeCatTitle") {
         val r = parseTaskInput("#removecat Work")
-        assertEquals("Work", r.removeCatTitle)
+        r.removeCatTitle shouldBe "Work"
     }
 
     test("#rmcat is alias for #removecat") {
         val r = parseTaskInput("#rmcat Personal")
-        assertEquals("Personal", r.removeCatTitle)
+        r.removeCatTitle shouldBe "Personal"
     }
 
     test("#moveto sets moveTarget") {
         val r = parseTaskInput("#moveto Inbox")
-        assertEquals("Inbox", r.moveTarget)
+        r.moveTarget shouldBe "Inbox"
     }
 
     test("#mt is alias for #moveto") {
         val r = parseTaskInput("#mt Inbox")
-        assertEquals("Inbox", r.moveTarget)
+        r.moveTarget shouldBe "Inbox"
     }
 
     test("#word sets parentRef") {
         val r = parseTaskInput("subtask #ProjectX")
-        assertEquals("ProjectX", r.parentRef)
+        r.parentRef shouldBe "ProjectX"
     }
 
     test("combined: title + category + date") {
         val r = parseTaskInput("My Task #cat do tomorrow")
-        assertEquals("My Task", r.title.trim())
-        assertTrue(r.item is Item.Category)
-        assertNotNull(r.doDate)
+        r.title.trim() shouldBe "My Task"
+        (r.item is Item.Category).shouldBeTrue()
+        r.doDate.shouldNotBeNull()
     }
 
     test("date in middle of title is extracted") {
         val r = parseTaskInput("buy mar 7 tiles")
-        assertNotNull(r.doDate, "doDate should be extracted from middle of title")
+        r.doDate.shouldNotBeNull()
     }
 
     test("bare trailing date as implicit do") {
         val r = parseTaskInput("finish report tomorrow")
         // Should interpret trailing "tomorrow" as do date
-        assertNotNull(r.doDate)
-        assertEquals("finish report", r.title.trim())
+        r.doDate.shouldNotBeNull()
+        r.title.trim() shouldBe "finish report"
     }
 
     test("input with only a #token") {
         val r = parseTaskInput("#cat")
-        assertEquals("", r.title.trim())
-        assertTrue(r.item is Item.Category)
+        r.title.trim() shouldBe ""
+        (r.item is Item.Category).shouldBeTrue()
     }
 
     // ==== VisualTransformation ====
@@ -215,7 +215,7 @@ class DateParserTest : FunSpec({
         val transformation = dateHighlightTransformation()
         val input = buildAnnotatedString { append("test do tomorrow") }
         val result = transformation.filter(input)
-        assertTrue(result.text.text.contains("test"))
-        assertTrue(result.text.text.contains("tomorrow"))
+        result.text.text.contains("test").shouldBeTrue()
+        result.text.text.contains("tomorrow").shouldBeTrue()
     }
 })

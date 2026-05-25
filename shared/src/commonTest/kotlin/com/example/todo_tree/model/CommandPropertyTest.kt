@@ -18,7 +18,7 @@ import com.example.todo_tree.collectTaskIds
 import com.example.todo_tree.findNode
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.property.checkAll
-import kotlin.test.assertEquals
+import io.kotest.matchers.shouldBe
 
 class CommandPropertyTest : FunSpec({
 
@@ -27,7 +27,7 @@ class CommandPropertyTest : FunSpec({
             val cmd = AddSubtask(parentId, "test", Item.Task())
             val r1 = cmd.apply(forest)
             val r2 = r1.inverse.apply(r1.forest)
-            assertEquals(forest, r2.forest)
+            r2.forest shouldBe forest
         }
     }
 
@@ -36,7 +36,7 @@ class CommandPropertyTest : FunSpec({
             val cmd = RemoveTask(taskId)
             val r1 = cmd.apply(forest)
             val r2 = r1.inverse.apply(r1.forest)
-            assertEquals(forest, r2.forest)
+            r2.forest shouldBe forest
         }
     }
 
@@ -51,7 +51,7 @@ class CommandPropertyTest : FunSpec({
             val cmd = ToggleCompleted(taskId)
             val r1 = cmd.apply(forest)
             val r2 = r1.inverse.apply(r1.forest)
-            assertEquals(forest, r2.forest)
+            r2.forest shouldBe forest
         }
     }
 
@@ -66,7 +66,7 @@ class CommandPropertyTest : FunSpec({
             val cmd = SetState(taskId, newItem)
             val r1 = cmd.apply(forest)
             val r2 = r1.inverse.apply(r1.forest)
-            assertEquals(forest, r2.forest)
+            r2.forest shouldBe forest
         }
     }
 
@@ -75,7 +75,7 @@ class CommandPropertyTest : FunSpec({
             val cmd = UpdateTask(taskId, "new_title", Item.Task(state = TaskState.Done))
             val r1 = cmd.apply(forest)
             val r2 = r1.inverse.apply(r1.forest)
-            assertEquals(forest, r2.forest)
+            r2.forest shouldBe forest
         }
     }
 
@@ -84,7 +84,7 @@ class CommandPropertyTest : FunSpec({
             val cmd = MoveUp(taskId)
             val r1 = cmd.apply(forest)
             val r2 = r1.inverse.apply(r1.forest)
-            assertEquals(forest, r2.forest)
+            r2.forest shouldBe forest
         }
     }
 
@@ -93,7 +93,7 @@ class CommandPropertyTest : FunSpec({
             val cmd = Indent(taskId)
             val r1 = cmd.apply(forest)
             val r2 = r1.inverse.apply(r1.forest)
-            assertEquals(forest, r2.forest)
+            r2.forest shouldBe forest
         }
     }
 
@@ -107,7 +107,7 @@ class CommandPropertyTest : FunSpec({
             val r1 = cmd.apply(forest)
             val r2 = r1.inverse.apply(r1.forest)
             val restoredParentId = TaskTree.findParentId(r2.forest, taskId)
-            assertEquals(originalParentId, restoredParentId)
+            restoredParentId shouldBe originalParentId
         }
     }
 
@@ -116,7 +116,7 @@ class CommandPropertyTest : FunSpec({
             val cmd = AddRootTask("root_test", Item.Task())
             val r1 = cmd.apply(forest)
             val r2 = r1.inverse.apply(r1.forest)
-            assertEquals(forest, r2.forest)
+            r2.forest shouldBe forest
         }
     }
 
@@ -126,7 +126,7 @@ class CommandPropertyTest : FunSpec({
             val cmd = RemoveRootTask(rootId)
             val r1 = cmd.apply(forest)
             val r2 = r1.inverse.apply(r1.forest)
-            assertEquals(forest, r2.forest)
+            r2.forest shouldBe forest
         }
     }
 
@@ -134,7 +134,7 @@ class CommandPropertyTest : FunSpec({
         checkAll(arbForest()) { forest ->
             val r1 = DeleteCompleted.apply(forest)
             val r2 = r1.inverse.apply(r1.forest)
-            assertEquals(forest, r2.forest)
+            r2.forest shouldBe forest
         }
     }
 })

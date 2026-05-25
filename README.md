@@ -65,6 +65,10 @@ webApp/src/
 | androidx.lifecycle.runtime-compose | `^2.11.0` | Lifecycle-aware coroutines | https://developer.android.com/jetpack/androidx/releases/lifecycle |
 | material-icons-core | `==1.7.3` | Check, expand/collapse icons | https://developer.android.com/jetpack/androidx/releases/compose-material |
 | kotest-property | `^6.1.11` | Property-based testing (Arb, checkAll, shrinking) | https://kotest.io/docs/proptest/property-based-testing.html |
+| kotest-assertions-core | `^6.1.11` | Matchers (shouldBe, shouldBeNull, shouldBeTrue) | https://kotest.io/docs/assertions/assertions.html |
+| kotest-framework-engine | `^6.1.11` | Multiplatform test engine | https://kotest.io/docs/framework/project-setup.html |
+| kotest-gradle-plugin | `^6.1.11` | KMP test engine registration | https://kotest.io/docs/framework/project-setup.html |
+| ksp | `^2.3.8` | Kotlin Symbol Processing (required by Kotest plugin) | https://github.com/google/ksp |
 
 ## Command Syntax
 
@@ -90,7 +94,7 @@ Supported date expressions: `today`, `tomorrow`, `next week`, `mon`–`sun`, `in
 
 ## Tests
 
-Uses **Kotest Property** (`io.kotest:kotest-property`) for property-based testing with built-in generators (Arb), shrinking, and `checkAll`/`forAll` test functions.
+Uses **Kotest** (`io.kotest:kotest-property` + `kotest-assertions-core` + `kotest-framework-engine`) for property-based testing with built-in generators (Arb), shrinking, `checkAll`/`forAll` test functions, and Kotest matchers (`shouldBe`, `shouldBeNull`, `shouldBeTrue`).
 
 ### Test structure
 

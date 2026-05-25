@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotest)
+    alias(libs.plugins.ksp)
 }
 
 kotlin {
@@ -46,16 +48,11 @@ kotlin {
             implementation("org.jetbrains.compose.material:material-icons-core:1.7.3")
         }
         commonTest.dependencies {
-            implementation(libs.kotlin.test)
+            implementation(libs.kotest.framework.engine)
             implementation(libs.kotest.property)
+            implementation(libs.kotest.assertions.core)
         }
     }
-}
-
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
-    // Wasm/Karma doesn't have a Kotest engine; JVM and Android handle discovery.
-    failOnNoDiscoveredTests = false
 }
 
 dependencies {
