@@ -41,7 +41,7 @@ Task manager with infinite nested subtrees, keyboard-first navigation, NLP date 
 | PR to main | ✅ | ✅ | ❌ |
 | Merge (push to main) | ✅ | ✅ | ✅ |
 
-The debug APK artifact (downloadable from the Actions run) can be side-loaded on any Android device for testing. The Web (WasmJs) build deploys to [GitHub Pages](https://7kitan.github.io/todo-tree/).
+The debug APK artifact (downloadable from the Actions run) can be side-loaded on any Android device for testing. The Web (WasmJs) build deploys to [GitHub Pages](https://7kitan.github.io/todo-tree/) — the APK is also embedded in the site at [`androidApp-debug.apk`](https://7kitan.github.io/todo-tree/androidApp-debug.apk) for direct mobile download.
 
 ## Project Structure
 
