@@ -181,7 +181,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
 
     // ==== Main layout ====
 
-    Box(modifier = modifier.fillMaxSize().clipToBounds().onSizeChanged { screenHeight = it.height.toFloat() }
+    Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).clipToBounds().onSizeChanged { screenHeight = it.height.toFloat() }
         .clickable(
             interactionSource = remember { MutableInteractionSource() },
             indication = null,
