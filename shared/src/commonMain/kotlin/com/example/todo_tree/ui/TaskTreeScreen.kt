@@ -199,12 +199,12 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
                         { if (cursorId != null) { deleteTargetId = cursorId } },
                         { if (cursorId != null) { inputMode = "add"; inputText = TextFieldValue("") } })
                 } else Modifier
-            ).clipToBounds().onSizeChanged { vpH = it.height.toFloat() }) {
+            ).clipToBounds().onSizeChanged { vpH = it.height.toFloat() }
+                .pointerInput(visibleOrder.size) { detectDragGestures(onDragStart = { dragStartY = it.y; scope.launch { scrollAnim.snapTo(scrollAnim.value) }; isDragging = true; dragOffset = 0f }, onDragEnd = { if (abs(dragOffset) < thr * 0.5f && dragStartY > screenHeight * 0.75f) swipeResetCounter++; isDragging = false; dragOffset = 0f }, onDragCancel = { isDragging = false; dragOffset = 0f }, onDrag = { ch, da -> ch.consume(); scope.launch { scrollAnim.snapTo(scrollAnim.value - da.y) }; dragOffset += da.y; if (abs(dragOffset) > thr) { if (dragOffset > thr) { moveUp(); dragOffset -= thr }; if (dragOffset < -thr) { moveDown(); dragOffset += thr } } }) }
+                .pointerInput(visibleOrder.size) { awaitPointerEventScope { while (true) { val e = awaitPointerEvent(); val s = e.changes.firstOrNull()?.scrollDelta ?: continue; scrollAcc += s.y; if (scrollAcc > scrollThr) { moveDown(); scrollAcc = 0f }; if (scrollAcc < -scrollThr) { moveUp(); scrollAcc = 0f } } } }) {
                 if (visibleOrder.isEmpty()) {
                     Text("No tasks", Modifier.padding(horizontal = 16.dp, vertical = 40.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else Column(Modifier.fillMaxWidth().wrapContentHeight().offset { IntOffset(0, -scrollAnim.value.roundToInt()) }
-                    .pointerInput(visibleOrder.size) { detectDragGestures(onDragStart = { dragStartY = it.y; scope.launch { scrollAnim.snapTo(scrollAnim.value) }; isDragging = true; dragOffset = 0f }, onDragEnd = { if (abs(dragOffset) < thr * 0.5f && dragStartY > screenHeight * 0.75f) swipeResetCounter++; isDragging = false; dragOffset = 0f }, onDragCancel = { isDragging = false; dragOffset = 0f }, onDrag = { ch, da -> ch.consume(); scope.launch { scrollAnim.snapTo(scrollAnim.value - da.y) }; dragOffset += da.y; if (abs(dragOffset) > thr) { if (dragOffset > thr) { moveUp(); dragOffset -= thr }; if (dragOffset < -thr) { moveDown(); dragOffset += thr } } }) }
-                    .pointerInput(visibleOrder.size) { awaitPointerEventScope { while (true) { val e = awaitPointerEvent(); val s = e.changes.firstOrNull()?.scrollDelta ?: continue; scrollAcc += s.y; if (scrollAcc > scrollThr) { moveDown(); scrollAcc = 0f }; if (scrollAcc < -scrollThr) { moveUp(); scrollAcc = 0f } } } }
                     .padding(top = 8.dp, bottom = 8.dp)) {
                     visibleOrder.forEachIndexed { i, item ->
                         val node = findTaskById(forest, item.id) ?: return@forEachIndexed
