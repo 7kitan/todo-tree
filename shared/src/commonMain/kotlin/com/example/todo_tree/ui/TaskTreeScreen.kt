@@ -484,14 +484,30 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
             }
         }
 
-        // ==== FAB (single button) ====
+        // ==== Bottom bar: undo / FAB / redo ====
 
-        TaskFab(
-            onClick = { inputMode = "add"; inputText = TextFieldValue("") },
+        val canUndo by viewModel.canUndo.collectAsState()
+        val canRedo by viewModel.canRedo.collectAsState()
+
+        Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 56.dp),
-        )
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            UndoButton(
+                onClick = { viewModel.undo() },
+                enabled = canUndo,
+            )
+            TaskFab(
+                onClick = { inputMode = "add"; inputText = TextFieldValue("") },
+            )
+            RedoButton(
+                onClick = { viewModel.redo() },
+                enabled = canRedo,
+            )
+        }
 
         if (showDoPicker) datePicker(editDoDate, { editDoDate = it; doDateEdited = true }) { showDoPicker = false }
         if (showDuePicker) datePicker(editDueDate, { editDueDate = it; dueDateEdited = true }) { showDuePicker = false }

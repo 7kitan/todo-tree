@@ -113,7 +113,9 @@ object TaskTree {
         return addTask(removed, newParentId, item)
     }
 
-    private fun findById(forest: List<ItemNode>, targetId: String): ItemNode? {
+    // ==== Command support ====
+
+    internal fun findById(forest: List<ItemNode>, targetId: String): ItemNode? {
         for (node in forest) {
             if (node.id == targetId) return node
             findById(node.children, targetId)?.let { return it }
@@ -129,6 +131,28 @@ object TaskTree {
             if (isDescendantOf(node.children, ancestorId, nodeId)) return true
         }
         return false
+    }
+
+    internal fun captureLocation(forest: List<ItemNode>, taskId: String): Triple<String, Int, ItemNode> {
+        val parent = _findParent(forest, taskId)
+            ?: error("Parent not found for task $taskId")
+        val idx = parent.children.indexOfFirst { it.id == taskId }
+        require(idx >= 0) { "Task $taskId not found in parent's children" }
+        return Triple(parent.id, idx, parent.children[idx])
+    }
+
+    internal fun findParentId(forest: List<ItemNode>, taskId: String): String? =
+        _findParent(forest, taskId)?.id
+
+    internal fun insertTask(
+        forest: List<ItemNode>,
+        parentId: String,
+        index: Int,
+        child: ItemNode,
+    ): List<ItemNode> = mapForest(forest, parentId) { node ->
+        val children = node.children.toMutableList()
+        children.add(index.coerceIn(0..children.size), child)
+        node.copy(children = children)
     }
 
     // ==== Internal ====
@@ -162,7 +186,7 @@ object TaskTree {
         node.copy(children = kids, item = newItem)
     }
 
-    private fun _findParent(forest: List<ItemNode>, childId: String): ItemNode? {
+    internal fun _findParent(forest: List<ItemNode>, childId: String): ItemNode? {
         for (node in forest) {
             if (node.children.any { it.id == childId }) return node
             _findParent(node.children, childId)?.let { return it }

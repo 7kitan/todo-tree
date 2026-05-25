@@ -7,10 +7,7 @@ package com.example.todo_tree.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.example.todo_tree.currentTimeMillis
-import com.example.todo_tree.model.Item
-import com.example.todo_tree.model.ItemNode
-import com.example.todo_tree.model.TaskState
-import com.example.todo_tree.model.TaskTree
+import com.example.todo_tree.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,28 +19,92 @@ class TaskViewModel : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    fun setSearchQuery(query: String) { _searchQuery.value = query }
+    private val _canUndo = MutableStateFlow(false)
+    val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
+    private val _canRedo = MutableStateFlow(false)
+    val canRedo: StateFlow<Boolean> = _canRedo.asStateFlow()
 
+    private val undoManager = UndoManager()
     private val __inbox__ = "__inbox__"
 
-    fun addRootTask(title: String, item: Item = Item.Task()): String? { if (title.isBlank()) return null; val node = ItemNode(title = title.trim(), item = item); _forest.value = _forest.value + node; return node.id }
-    fun addInboxChild(title: String, item: Item = Item.Task()): String? = addSubtask(__inbox__, title, item)
-    fun addSubtask(parentId: String, title: String, item: Item = Item.Task()): String? { if (title.isBlank()) return null; val node = ItemNode(title = title.trim(), item = item); _forest.value = TaskTree.addTask(_forest.value, parentId, node); return node.id }
-    fun removeTask(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.removeTask(_forest.value, taskId) }
-    fun toggleCompleted(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.toggleCompleted(_forest.value, taskId) }
-    fun updateTask(taskId: String, title: String, item: Item) {
-        if (taskId == __inbox__) return
-        _forest.value = TaskTree.updateTask(_forest.value, taskId) { it.copy(title = title.trim(), item = item) }
+    fun setSearchQuery(query: String) { _searchQuery.value = query }
+
+    // ==== Private helpers ====
+
+    private fun exec(cmd: Command) {
+        _forest.value = undoManager.execute(cmd, _forest.value).forest
+        _canUndo.value = undoManager.canUndo
+        _canRedo.value = undoManager.canRedo
     }
-    fun deleteCompleted() { _forest.value = TaskTree.deleteCompleted(_forest.value) }
-    fun moveUp(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.moveUp(_forest.value, taskId) }
-    fun moveDown(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.moveDown(_forest.value, taskId) }
+
+    private fun execWithId(cmd: Command, title: String): String? {
+        if (title.isBlank()) return null
+        val r = undoManager.execute(cmd, _forest.value)
+        _forest.value = r.forest
+        _canUndo.value = undoManager.canUndo
+        _canRedo.value = undoManager.canRedo
+        return r.newNodeId
+    }
+
+    // ==== Public mutations (all go through commands) ====
+
+    fun addRootTask(title: String, item: Item = Item.Task()): String? =
+        execWithId(AddRootTask(title.trim(), item), title)
+
+    fun addSubtask(parentId: String, title: String, item: Item = Item.Task()): String? =
+        execWithId(AddSubtask(parentId, title.trim(), item), title)
+
+    fun addInboxChild(title: String, item: Item = Item.Task()): String? =
+        addSubtask(__inbox__, title, item)
+
+    fun removeTask(taskId: String) {
+        if (taskId == __inbox__) return; exec(RemoveTask(taskId))
+    }
+
+    fun toggleCompleted(taskId: String) {
+        if (taskId == __inbox__) return; exec(ToggleCompleted(taskId))
+    }
+
+    fun updateTask(taskId: String, title: String, item: Item) {
+        if (taskId == __inbox__) return; exec(UpdateTask(taskId, title.trim(), item))
+    }
+
+    fun deleteCompleted() { exec(DeleteCompleted) }
+
+    fun moveUp(taskId: String) {
+        if (taskId == __inbox__) return; exec(MoveUp(taskId))
+    }
+
+    fun moveDown(taskId: String) {
+        if (taskId == __inbox__) return; exec(MoveDown(taskId))
+    }
+
     fun moveTo(taskId: String, newParentId: String) {
         if (taskId == __inbox__ || newParentId == __inbox__) return
-        _forest.value = TaskTree.moveTo(_forest.value, taskId, newParentId)
+        exec(MoveTask(taskId, newParentId))
     }
-    fun indent(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.indent(_forest.value, taskId) }
-    fun outdent(taskId: String) { if (taskId == __inbox__) return; _forest.value = TaskTree.outdent(_forest.value, taskId) }
+
+    fun indent(taskId: String) {
+        if (taskId == __inbox__) return; exec(Indent(taskId))
+    }
+
+    fun outdent(taskId: String) {
+        if (taskId == __inbox__) return; exec(Outdent(taskId))
+    }
+
+    fun undo() {
+        val r = undoManager.undo(_forest.value) ?: return
+        _forest.value = r.forest
+        _canUndo.value = undoManager.canUndo
+        _canRedo.value = undoManager.canRedo
+    }
+
+    fun redo() {
+        val r = undoManager.redo(_forest.value) ?: return
+        _forest.value = r.forest
+        _canUndo.value = undoManager.canUndo
+        _canRedo.value = undoManager.canRedo
+    }
 }
 
 // ==== Sample data ====
