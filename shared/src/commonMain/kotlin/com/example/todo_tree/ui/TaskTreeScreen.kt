@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.example.todo_tree.model.Item
 import com.example.todo_tree.model.ItemNode
 import com.example.todo_tree.model.TaskState
+import com.example.todo_tree.isDesktop
 import com.example.todo_tree.model.doDate
 import com.example.todo_tree.model.dueDate
 import com.example.todo_tree.viewmodel.TaskViewModel
@@ -188,12 +189,14 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
             onClick = { swipeResetCounter++; editingId = null },
         )) {
         Column(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f).onPreviewKeyEvent { event ->
-                handleKey(event, { moveUp() }, { moveDown() }, { moveLeft() }, { moveRight() },
-                    { if (cursorId != null) viewModel.toggleCompleted(cursorId) }, { startEdit(cursorId) },
-                    { if (cursorId != null) { deleteTargetId = cursorId } },
-                    { if (cursorId != null) { inputMode = "add"; inputText = TextFieldValue("") } })
-            }.clipToBounds().onSizeChanged { vpH = it.height.toFloat() }) {
+            Box(Modifier.weight(1f).then(
+                if (isDesktop) Modifier.onPreviewKeyEvent { event ->
+                    handleKey(event, { moveUp() }, { moveDown() }, { moveLeft() }, { moveRight() },
+                        { if (cursorId != null) viewModel.toggleCompleted(cursorId) }, { startEdit(cursorId) },
+                        { if (cursorId != null) { deleteTargetId = cursorId } },
+                        { if (cursorId != null) { inputMode = "add"; inputText = TextFieldValue("") } })
+                } else Modifier
+            ).clipToBounds().onSizeChanged { vpH = it.height.toFloat() }) {
                 if (visibleOrder.isEmpty()) {
                     Text("No tasks", Modifier.padding(horizontal = 16.dp, vertical = 40.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else Column(Modifier.fillMaxWidth().wrapContentHeight().offset { IntOffset(0, -scrollAnim.value.roundToInt()) }

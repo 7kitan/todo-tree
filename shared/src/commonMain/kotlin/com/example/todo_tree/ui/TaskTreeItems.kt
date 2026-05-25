@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Search
 import com.example.todo_tree.LocalDarkMode
 import com.example.todo_tree.currentTimeMillis
+import com.example.todo_tree.isDesktop
 import com.example.todo_tree.model.doDate
 import com.example.todo_tree.model.dueDate
 import com.example.todo_tree.model.isCategory
@@ -165,11 +166,13 @@ fun EditingTaskRow(
             BasicTextField(
                 value = title,
                 onValueChange = onTitleChange,
-                modifier = Modifier.weight(1f).onKeyEvent { event ->
-                    if (event.key == Key.Enter && event.type == KeyEventType.KeyDown) { onSave(); true }
-                    else if (event.key == Key.Escape && event.type == KeyEventType.KeyDown) { onCancel(); true }
-                    else false
-                },
+                modifier = Modifier.weight(1f).then(
+                    if (isDesktop) Modifier.onKeyEvent { event ->
+                        if (event.key == Key.Enter && event.type == KeyEventType.KeyDown) { onSave(); true }
+                        else if (event.key == Key.Escape && event.type == KeyEventType.KeyDown) { onCancel(); true }
+                        else false
+                    } else Modifier
+                ),
                 singleLine = true,
                 visualTransformation = visualTransformation,
                 textStyle = MaterialTheme.typography.bodyMedium,
@@ -274,10 +277,12 @@ fun InputTaskRow(
         BasicTextField(
             value = text,
             onValueChange = onTextChange,
-            modifier = Modifier.weight(1f).onKeyEvent { event ->
-                if (event.key == Key.Enter && event.type == KeyEventType.KeyDown) { onDone(); true }
-                else false
-            },
+            modifier = Modifier.weight(1f).then(
+                if (isDesktop) Modifier.onKeyEvent { event ->
+                    if (event.key == Key.Enter && event.type == KeyEventType.KeyDown) { onDone(); true }
+                    else false
+                } else Modifier
+            ),
             singleLine = true,
             visualTransformation = visualTransformation,
             textStyle = MaterialTheme.typography.bodyMedium,
