@@ -33,6 +33,16 @@ Task manager with infinite nested subtrees, keyboard-first navigation, NLP date 
 - **Record-style FAB**: Large 80dp bottom-center button for adding tasks
 - **Local persistence**: Forest auto-saves to disk/localStorage as pretty-printed JSON with 500ms debounce
 
+## CI/CD
+
+| Event | Build + test | APK artifact | Web deploy |
+|---|---|---|---|
+| Push feature branch | ✅ | ❌ | ❌ |
+| PR to main | ✅ | ✅ | ❌ |
+| Merge (push to main) | ✅ | ✅ | ✅ |
+
+The debug APK artifact (downloadable from the Actions run) can be side-loaded on any Android device for testing. The Web (WasmJs) build deploys to [GitHub Pages](https://7kitan.github.io/todo-tree/).
+
 ## Project Structure
 
 ```
