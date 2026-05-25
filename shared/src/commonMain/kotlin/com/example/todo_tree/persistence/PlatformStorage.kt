@@ -24,4 +24,6 @@ package com.example.todo_tree.persistence
 expect object PlatformStorage {
     fun write(json: String)
     fun read(): String?
+    fun writeSettings(json: String)
+    fun readSettings(): String?
 }

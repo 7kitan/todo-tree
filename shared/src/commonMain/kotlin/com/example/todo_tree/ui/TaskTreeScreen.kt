@@ -48,7 +48,7 @@ import kotlinx.coroutines.delay
 private val animDuration = 250
 
 @Composable
-fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
+fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onThemeToggle: () -> Unit = {}) {
     // ==== State ====
 
     val forest by viewModel.forest.collectAsState()
@@ -348,7 +348,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier) {
                         },
                     )
                 } else {
-                    TodayBar(onSearchClick = { inputMode = "search"; inputText = TextFieldValue("") })
+                    TodayBar(onSearchClick = { inputMode = "search"; inputText = TextFieldValue("") }, onThemeToggle = onThemeToggle)
                 }
 
                 // ==== Fuzzy dropdown for #removecat ====
