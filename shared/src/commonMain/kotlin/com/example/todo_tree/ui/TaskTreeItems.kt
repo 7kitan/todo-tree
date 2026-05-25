@@ -19,8 +19,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import com.example.todo_tree.LocalDarkMode
 import com.example.todo_tree.currentTimeMillis
 import com.example.todo_tree.model.doDate
@@ -246,7 +246,7 @@ fun TodayBar(onSearchClick: () -> Unit = {}, onThemeToggle: () -> Unit = {}) {
             Icon(Icons.Filled.Search, "Search", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         }
         Box(Modifier.size(28.dp).clickable(onClick = onThemeToggle), contentAlignment = Alignment.Center) {
-            Icon(Icons.Filled.Settings, "Toggle theme", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            Icon(Icons.Filled.DarkMode, "Toggle theme", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(4.dp))
     }
