@@ -64,6 +64,7 @@ webApp/src/
 | androidx.lifecycle.viewmodel-compose | `^2.11.0` | ViewModel in Compose | https://developer.android.com/jetpack/androidx/releases/lifecycle |
 | androidx.lifecycle.runtime-compose | `^2.11.0` | Lifecycle-aware coroutines | https://developer.android.com/jetpack/androidx/releases/lifecycle |
 | material-icons-core | `==1.7.3` | Check, expand/collapse icons | https://developer.android.com/jetpack/androidx/releases/compose-material |
+| kotest-property | `^6.1.11` | Property-based testing (Arb, checkAll, shrinking) | https://kotest.io/docs/proptest/property-based-testing.html |
 
 ## Command Syntax
 
@@ -89,6 +90,22 @@ Supported date expressions: `today`, `tomorrow`, `next week`, `mon`–`sun`, `in
 
 ## Tests
 
-- **Desktop**: `./gradlew :shared:jvmTest`
+Uses **Kotest Property** (`io.kotest:kotest-property`) for property-based testing with built-in generators (Arb), shrinking, and `checkAll`/`forAll` test functions.
+
+### Test structure
+
+```
+shared/src/commonTest/kotlin/com/example/todo_tree/
+├── Arbs.kt                          — Custom generators (Arb) for trees and commands
+├── DateParserTest.kt                — Example-based + invariant tests for NLP parsing
+└── model/
+    ├── TaskTreePropertyTest.kt      — Property tests for all tree operations
+    ├── CommandPropertyTest.kt       — Command roundtrip invariants (ADT correctness)
+    └── UndoManagerPropertyTest.kt   — Undo/redo stack behavior
+```
+
+### Running
+
+- **Desktop (JVM)**: `./gradlew :shared:jvmTest`
 - **Android host**: `./gradlew :shared:testAndroidHostTest`
 - **Web (Wasm)**: `./gradlew :shared:wasmJsTest`

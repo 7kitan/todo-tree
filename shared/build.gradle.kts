@@ -47,8 +47,15 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.kotest.property)
         }
     }
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+    // Wasm/Karma doesn't have a Kotest engine; JVM and Android handle discovery.
+    failOnNoDiscoveredTests = false
 }
 
 dependencies {
