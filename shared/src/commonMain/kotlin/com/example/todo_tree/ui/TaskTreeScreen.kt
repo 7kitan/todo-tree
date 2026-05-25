@@ -8,12 +8,13 @@ package com.example.todo_tree.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,6 +30,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
@@ -45,6 +47,7 @@ import com.example.todo_tree.viewmodel.TaskViewModel
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private val animDuration = 250
 
@@ -114,6 +117,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
     val padPx = with(LocalDensity.current) { 8.dp.toPx() }
     var vpH by remember { mutableFloatStateOf(0f) }
     val scrollAnim = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
 
     var pendingRemovals by remember { mutableStateOf(setOf<String>()) }
 
@@ -172,14 +176,6 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(inputMode) { if (inputMode != null) focusRequester.requestFocus() }
 
-    // ==== Gesture thresholds ====
-
-    var accY by remember { mutableStateOf(0f) }
-    var scrollAcc by remember { mutableFloatStateOf(0f) }
-    var dragStartY by remember { mutableFloatStateOf(0f) }
-    val thr = rowH * 0.5f
-    val scrollThr = rowH * 0.4f
-
     // ==== Main layout ====
 
     Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).clipToBounds().onSizeChanged { screenHeight = it.height.toFloat() }
@@ -200,8 +196,37 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
                 if (visibleOrder.isEmpty()) {
                     Text("No tasks", Modifier.padding(horizontal = 16.dp, vertical = 40.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else Column(Modifier.fillMaxWidth().wrapContentHeight().offset { IntOffset(0, -scrollAnim.value.roundToInt()) }
-                    .pointerInput(visibleOrder.size) { detectDragGestures(onDragStart = { dragStartY = it.y }, onDragEnd = { if (abs(accY) < thr * 0.5f && dragStartY > screenHeight * 0.75f) swipeResetCounter++; accY = 0f }, onDragCancel = { accY = 0f }, onDrag = { ch, da -> ch.consume(); accY += da.y; if (abs(accY) > thr) { if (accY > thr) { moveUp(); accY = 0f }; if (accY < -thr) { moveDown(); accY = 0f } } }) }
-                    .pointerInput(visibleOrder.size) { awaitPointerEventScope { while (true) { val e = awaitPointerEvent(); val s = e.changes.firstOrNull()?.scrollDelta ?: continue; scrollAcc += s.y; if (scrollAcc > scrollThr) { moveDown(); scrollAcc = 0f }; if (scrollAcc < -scrollThr) { moveUp(); scrollAcc = 0f } } } }
+                    .pointerInput(Unit) {
+                        val velocityTracker = VelocityTracker()
+                        detectVerticalDragGestures(
+                            onDragStart = { velocityTracker.resetTracking() },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                val maxScroll = maxOf(0f, visibleOrder.size * rowH + padPx * 2f - vpH)
+                                scope.launch {
+                                    scrollAnim.snapTo(
+                                        (scrollAnim.value - dragAmount).coerceIn(0f, maxScroll)
+                                    )
+                                }
+                                velocityTracker.addPosition(change.uptimeMillis, change.position)
+                            },
+                            onDragEnd = {
+                                val velocity = velocityTracker.calculateVelocity().y
+                                scope.launch {
+                                    if (!scrollAnim.isRunning) {
+                                        val maxScroll = maxOf(0f, visibleOrder.size * rowH + padPx * 2f - vpH)
+                                        scrollAnim.animateDecay(velocity, exponentialDecay())
+                                        val clamped = scrollAnim.value.coerceIn(0f, maxScroll)
+                                        if (clamped != scrollAnim.value) {
+                                            scrollAnim.snapTo(clamped)
+                                        }
+                                    }
+                                }
+                            },
+                            onDragCancel = { },
+                        )
+                    }
+                    .pointerInput(Unit) { awaitPointerEventScope { var scrollAcc = 0f; while (true) { val e = awaitPointerEvent(); val s = e.changes.firstOrNull()?.scrollDelta ?: continue; scrollAcc += s.y; if (scrollAcc > rowH * 0.4f) { moveDown(); scrollAcc = 0f }; if (scrollAcc < -rowH * 0.4f) { moveUp(); scrollAcc = 0f } } } }
                     .padding(top = 8.dp, bottom = 8.dp)) {
                     visibleOrder.forEachIndexed { i, item ->
                         val node = findTaskById(forest, item.id) ?: return@forEachIndexed
