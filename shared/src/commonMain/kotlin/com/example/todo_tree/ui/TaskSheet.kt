@@ -9,7 +9,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.dp
 import com.example.todo_tree.currentTimeMillis
 import com.example.todo_tree.model.DAY_MS
@@ -61,9 +64,47 @@ fun EditTaskSheet(task: ItemNode, onDismiss: () -> Unit, onSave: (String, Long?,
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun datePicker(initial: Long?, onConfirm: (Long?) -> Unit, onDismiss: () -> Unit) {
-    val state = rememberDatePickerState(initialSelectedDateMillis = initial)
-    AlertDialog(onDismissRequest = onDismiss, confirmButton = { TextButton(onClick = { onConfirm(state.selectedDateMillis); onDismiss() }) { Text("OK") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }, text = { DatePicker(state = state) })
+    val todayStart = (currentTimeMillis() / DAY_MS) * DAY_MS
+    var showCustom by remember { mutableStateOf(false) }
+    val state = rememberDatePickerState(
+        initialSelectedDateMillis = initial,
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis >= todayStart
+            override fun isSelectableYear(year: Int): Boolean = true
+        }
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(12.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        title = { Text("Select date", style = MaterialTheme.typography.titleSmall) },
+        text = {
+            Column {
+                if (showCustom) {
+                    DatePicker(state = state)
+                } else {
+                    DateRow("Today", onClick = { onConfirm(todayStart); onDismiss() })
+                    DateRow("Tomorrow", onClick = { onConfirm(todayStart + DAY_MS); onDismiss() })
+                    DateRow("Next week", onClick = { onConfirm(todayStart + 7 * DAY_MS); onDismiss() })
+                    if (initial != null) {
+                        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                        DateRow("No date", onClick = { onConfirm(null); onDismiss() })
+                    }
+                    HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                    DateRow("Custom date", onClick = { showCustom = true })
+                }
+            }
+        },
+        confirmButton = { if (showCustom) TextButton(onClick = { onConfirm(state.selectedDateMillis); onDismiss() }) { Text("Done") } },
+        dismissButton = { TextButton(onClick = if (showCustom) {{ showCustom = false }} else onDismiss) { Text(if (showCustom) "Back" else "Cancel") } }
+    )
+}
+
+@Composable
+private fun DateRow(text: String, onClick: () -> Unit) {
+    Box(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp, horizontal = 4.dp)) {
+        Text(text, style = MaterialTheme.typography.bodyLarge)
+    }
 }
 
 fun relativeDate(epochMillis: Long): String {
