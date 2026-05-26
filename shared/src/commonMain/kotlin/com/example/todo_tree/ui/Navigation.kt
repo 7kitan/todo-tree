@@ -11,6 +11,7 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import com.example.todo_tree.model.GHOST_ROOT
 import com.example.todo_tree.model.Item
 import com.example.todo_tree.model.ItemNode
 import com.example.todo_tree.model.dueDate
@@ -27,7 +28,11 @@ fun flattenVisible(forest: List<ItemNode>, expanded: Set<String>, searchQuery: S
         fun walk(nodes: List<ItemNode>, depth: Int) {
             for (node in nodes) {
                 result.add(VisibleItem(node.id, depth))
-                if (node.id in expanded) walk(node.children, depth + 1)
+                if (node.id == GHOST_ROOT) {
+                    walk(node.children, depth)
+                } else if (node.id in expanded) {
+                    walk(node.children, depth + 1)
+                }
             }
         }
         walk(forest, 0)
@@ -55,10 +60,14 @@ fun flattenVisible(forest: List<ItemNode>, expanded: Set<String>, searchQuery: S
 
     fun walk(nodes: List<ItemNode>, depth: Int, showAll: Boolean = false) {
         for (node in nodes) {
-            val show = showAll || node.id in matchIds || node.id in ancestorIds
-            if (show) {
-                result.add(VisibleItem(node.id, depth))
-                walk(node.children, depth + 1, showAll || node.id in matchIds)
+            if (node.id == GHOST_ROOT) {
+                walk(node.children, depth, showAll)
+            } else {
+                val show = showAll || node.id in matchIds || node.id in ancestorIds
+                if (show) {
+                    result.add(VisibleItem(node.id, depth))
+                    walk(node.children, depth + 1, showAll || node.id in matchIds)
+                }
             }
         }
     }

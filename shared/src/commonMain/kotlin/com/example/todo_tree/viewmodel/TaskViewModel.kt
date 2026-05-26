@@ -59,14 +59,18 @@ class TaskViewModel : ViewModel() {
 
     private fun loadForest(): List<ItemNode> {
         val stored = PlatformStorage.read()
-        if (stored != null) {
-            return try {
+        val forest = if (stored != null) {
+            try {
                 json.decodeFromString<List<ItemNode>>(stored)
             } catch (_: Exception) {
                 sampleForest()
             }
+        } else {
+            sampleForest()
         }
-        return sampleForest()
+        return if (forest.none { it.id == GHOST_ROOT })
+            listOf(ItemNode(id = GHOST_ROOT, title = "", item = Item.Category, children = forest))
+        else forest
     }
 
     fun setSearchQuery(query: String) { _searchQuery.value = query }
@@ -177,42 +181,44 @@ private fun sampleForest(): List<ItemNode> {
         ItemNode(id = id, title = title, item = Item.Category, children = subs)
 
     return listOf(
-        category("__inbox__", "Inbox", listOf(
-            task("Pay electricity bill", p2),
-            task("Buy groceries", t),
-            taskDo("Schedule dentist", tmw),
-            taskBoth("Plan weekend trip", tmw, d3),
-            waiting("Wait for design review", t),
-            done("Write Q1 report", p2),
-        )),
-        category("Work", listOf(
-            project("Website redesign", d5, listOf(
-                task("Design mockups", d3),
-                taskBoth("Implement landing page", tmw, d5),
+        ItemNode(id = GHOST_ROOT, title = "", item = Item.Category, children = listOf(
+            category("__inbox__", "Inbox", listOf(
+                task("Pay electricity bill", p2),
+                task("Buy groceries", t),
+                taskDo("Schedule dentist", tmw),
+                taskBoth("Plan weekend trip", tmw, d3),
+                waiting("Wait for design review", t),
+                done("Write Q1 report", p2),
             )),
-            task("Fix login bug", p2),
-            taskDo("Review PR comments", tmw),
-        )),
-        category("Personal", listOf(
-            project("Home renovation", d10, listOf(
-                taskDo("Buy tiles", tmw),
-                task("Paint bedroom", d10),
+            category("Work", listOf(
+                project("Website redesign", d5, listOf(
+                    task("Design mockups", d3),
+                    taskBoth("Implement landing page", tmw, d5),
+                )),
+                task("Fix login bug", p2),
+                taskDo("Review PR comments", tmw),
             )),
-            task("Read 3 books", d30),
-            waiting("Order new passport", d7),
-        )),
-        category("Deep nesting", listOf(
-            task("L1", t, listOf(
-                task("L2", t, listOf(
-                    task("L3", t, listOf(
-                        task("L4", t, listOf(
-                            task("L5", t, listOf(
-                                task("L6 leaf", t),
+            category("Personal", listOf(
+                project("Home renovation", d10, listOf(
+                    taskDo("Buy tiles", tmw),
+                    task("Paint bedroom", d10),
+                )),
+                task("Read 3 books", d30),
+                waiting("Order new passport", d7),
+            )),
+            category("Deep nesting", listOf(
+                task("L1", t, listOf(
+                    task("L2", t, listOf(
+                        task("L3", t, listOf(
+                            task("L4", t, listOf(
+                                task("L5", t, listOf(
+                                    task("L6 leaf", t),
+                                )),
                             )),
                         )),
                     )),
                 )),
             )),
-        )),
+        ))
     )
 }

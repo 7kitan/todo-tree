@@ -60,3 +60,5 @@ val ItemNode.dueDate: Long? get() = when (val i = item) {
 val ItemNode.doDate: Long? get() = (item as? Item.Task)?.doDate
 
 val ItemNode.isCategory: Boolean get() = item is Item.Category
+
+const val GHOST_ROOT = "__ghost_root__"

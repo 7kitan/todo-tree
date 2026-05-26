@@ -35,6 +35,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.example.todo_tree.model.GHOST_ROOT
 import com.example.todo_tree.model.Item
 import com.example.todo_tree.model.ItemNode
 import com.example.todo_tree.model.TaskState
@@ -187,11 +188,15 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
     // ensures navigating back to a queued node drops it from pendingRemovals,
     // cancelling its collapse and resetting the timer.
 
+    var hasScrolledOnce by remember { mutableStateOf(false) }
+
     LaunchedEffect(cursorIndex, vpH, isDragging, wheelIdle) {
         if (vpH <= 0f || isDragging) return@LaunchedEffect
         scrollAnim.animateTo(cursorIndex * rowH + padPx + rowH / 2f - vpH * 0.5f, tween(200))
+        val id = cursorId ?: return@LaunchedEffect; if (id == GHOST_ROOT) return@LaunchedEffect
+        if (!hasScrolledOnce) { hasScrolledOnce = true; return@LaunchedEffect }
         delay(100)
-        val id = cursorId ?: return@LaunchedEffect; val node = findTaskById(forest, id) ?: return@LaunchedEffect
+        val node = findTaskById(forest, id) ?: return@LaunchedEffect
         if (node.children.isNotEmpty() && node.id !in expanded) expanded = expanded + node.id
         // Keep only nodes that are ancestors of the cursor (including the cursor node itself).
         val ne = expanded.filter { eid ->
@@ -229,6 +234,13 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
                 } else Column(Modifier.fillMaxWidth().wrapContentHeight().offset { IntOffset(0, -scrollAnim.value.roundToInt()) }
                     .padding(top = 8.dp, bottom = 8.dp)) {
                     visibleOrder.forEachIndexed { i, item ->
+                        if (item.id == GHOST_ROOT) {
+                            Box(Modifier.fillMaxWidth().height(40.dp), contentAlignment = Alignment.Center) {
+                                Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp)
+                                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)))
+                            }
+                            return@forEachIndexed
+                        }
                         val node = findTaskById(forest, item.id) ?: return@forEachIndexed
                         key(item.id) {
                             AnimatedVisibility(
@@ -360,8 +372,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
                                         expanded = expanded + cursorId
                                         viewModel.addSubtask(cursorId, p.title, finalItem)
                                     } else {
-                                        expanded = expanded + "__inbox__"
-                                        viewModel.addInboxChild(p.title, finalItem)
+                                        viewModel.addSubtask(GHOST_ROOT, p.title, finalItem)
                                     }
                                     inputMode = null; inputText = TextFieldValue("")
                                     pendingFocusId = newId
