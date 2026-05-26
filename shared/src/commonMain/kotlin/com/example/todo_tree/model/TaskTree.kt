@@ -5,6 +5,8 @@
 
 package com.example.todo_tree.model
 
+import com.example.todo_tree.currentTimeMillis
+
 object TaskTree {
 
     // ==== Core mutations ====
@@ -169,6 +171,15 @@ object TaskTree {
         forest.filterNot { it.id == targetId }.map { node ->
             node.copy(children = removeFromForest(node.children, targetId))
         }
+
+    internal fun countDueToday(forest: List<ItemNode>): Int {
+        val todayStart = (currentTimeMillis() / DAY_MS) * DAY_MS
+        val todayEnd = todayStart + DAY_MS - 1
+        fun walk(nodes: List<ItemNode>): Int = nodes.sumOf { node ->
+            (if (node.dueDate in todayStart..todayEnd) 1 else 0) + walk(node.children)
+        }
+        return walk(forest)
+    }
 
     private fun normalizeProjectStates(forest: List<ItemNode>): List<ItemNode> = forest.map { node ->
         val kids = node.children.map { normalizeProjectStates(listOf(it)).first() }

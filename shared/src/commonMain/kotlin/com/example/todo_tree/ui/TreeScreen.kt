@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -35,6 +36,8 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.example.todo_tree.currentHour
+import com.example.todo_tree.currentTimeMillis
 import com.example.todo_tree.model.GHOST_ROOT
 import com.example.todo_tree.model.INBOX_ID
 import com.example.todo_tree.model.Item
@@ -42,6 +45,7 @@ import com.example.todo_tree.model.ItemNode
 import com.example.todo_tree.model.MAX_FUZZY_RESULTS
 import com.example.todo_tree.model.ROW_HEIGHT_DP
 import com.example.todo_tree.model.TaskState
+import com.example.todo_tree.model.TaskTree
 import com.example.todo_tree.isDesktop
 import com.example.todo_tree.model.doDate
 import com.example.todo_tree.model.dueDate
@@ -243,10 +247,30 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
                     .padding(top = 8.dp, bottom = 8.dp)) {
                     visibleOrder.forEachIndexed { i, item ->
                         if (item.id == GHOST_ROOT) {
-                            Box(Modifier.fillMaxWidth().height(ROW_HEIGHT_DP.dp), contentAlignment = Alignment.Center) {
-                                Text("···",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+                            val d = (i - cursorIndex).coerceIn(-5, 5)
+                            val alpha = (1f - abs(d) * 0.25f).coerceIn(0f, 1f)
+                            val hour = currentHour()
+                            val greeting = when (hour) {
+                                in 5..11 -> "Good morning."
+                                in 12..17 -> "Good afternoon."
+                                else -> "Good evening."
+                            }
+                            val dueCount = TaskTree.countDueToday(forest)
+                            val dueText = if (dueCount > 0) {
+                                val label = if (dueCount == 1) "task" else "tasks"
+                                "$dueCount $label due today."
+                            } else null
+                            Box(Modifier.fillMaxWidth().height(ROW_HEIGHT_DP.dp).graphicsLayer { this.alpha = alpha }) {
+                                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(greeting,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    if (dueText != null) {
+                                        Text(dueText,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
                             }
                             return@forEachIndexed
                         }
