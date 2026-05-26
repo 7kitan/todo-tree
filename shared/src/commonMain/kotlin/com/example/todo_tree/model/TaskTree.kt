@@ -39,7 +39,7 @@ object TaskTree {
             }
             node.copy(item = newItem)
         }
-        return consolidate(toggled)
+        return normalizeProjectStates(toggled)
     }
 
     // ==== Reorder / bulk ====
@@ -133,12 +133,14 @@ object TaskTree {
         return false
     }
 
-    internal fun captureLocation(forest: List<ItemNode>, taskId: String): Triple<String, Int, ItemNode> {
+    internal data class NodeLocation(val parentId: String, val index: Int, val node: ItemNode)
+
+    internal fun captureLocation(forest: List<ItemNode>, taskId: String): NodeLocation {
         val parent = _findParent(forest, taskId)
             ?: error("Parent not found for task $taskId")
         val idx = parent.children.indexOfFirst { it.id == taskId }
         require(idx >= 0) { "Task $taskId not found in parent's children" }
-        return Triple(parent.id, idx, parent.children[idx])
+        return NodeLocation(parent.id, idx, parent.children[idx])
     }
 
     internal fun findParentId(forest: List<ItemNode>, taskId: String): String? =
@@ -168,8 +170,8 @@ object TaskTree {
             node.copy(children = removeFromForest(node.children, targetId))
         }
 
-    private fun consolidate(forest: List<ItemNode>): List<ItemNode> = forest.map { node ->
-        val kids = node.children.map { consolidate(listOf(it)).first() }
+    private fun normalizeProjectStates(forest: List<ItemNode>): List<ItemNode> = forest.map { node ->
+        val kids = node.children.map { normalizeProjectStates(listOf(it)).first() }
         val newItem = when (val i = node.item) {
             is Item.Project -> {
                 val allDone = kids.isNotEmpty() && kids.all { child ->

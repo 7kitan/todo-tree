@@ -1,5 +1,5 @@
 // =============================================================================
-//  EDIT_TASK_SHEET.KT
+//  TASK_SHEET.KT
 //  Modal bottom sheet for editing task fields + date picker + date utilities.
 // =============================================================================
 
@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.todo_tree.currentTimeMillis
+import com.example.todo_tree.model.DAY_MS
 import com.example.todo_tree.model.Item
 import com.example.todo_tree.model.ItemNode
 import com.example.todo_tree.model.doDate
@@ -65,8 +66,8 @@ internal fun datePicker(initial: Long?, onConfirm: (Long?) -> Unit, onDismiss: (
 }
 
 fun relativeDate(epochMillis: Long): String {
-    val today = currentTimeMillis() / 86_400_000L
-    val target = epochMillis / 86_400_000L
+    val today = currentTimeMillis() / DAY_MS
+    val target = epochMillis / DAY_MS
     val days = (target - today).toInt()
     val dayNames = arrayOf("Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed")
     return when {
@@ -87,12 +88,12 @@ fun relativeDate(epochMillis: Long): String {
 }
 
 fun formatDate(epochMillis: Long): String {
-    val todayDays = currentTimeMillis() / 86_400_000L
+    val todayDays = currentTimeMillis() / DAY_MS
     var cy = 1970L; var rd = todayDays
     while (true) { val d = if (isLeap(cy)) 366L else 365L; if (rd < d) break; rd -= d; cy++ }
     val curYear = cy
 
-    var y = 1970L; var r = epochMillis / 86_400_000L
+    var y = 1970L; var r = epochMillis / DAY_MS
     while (true) { val d = if (isLeap(y)) 366L else 365L; if (r < d) break; r -= d; y++ }
     val md = if (isLeap(y)) intArrayOf(31,29,31,30,31,30,31,31,30,31,30,31) else intArrayOf(31,28,31,30,31,30,31,31,30,31,30,31)
     var m = 1; for (dm in md) { if (r < dm) break; r -= dm; m++ }

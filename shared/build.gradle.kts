@@ -46,9 +46,11 @@ kotlin {
             implementation(libs.compose.components.resources)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation("org.jetbrains.compose.material:material-icons-core:1.7.3")
-            implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.compose.material.icons.core)
+            implementation(libs.compose.material.icons.extended)
+            implementation(libs.compose.material.icons.core)
+            implementation(libs.compose.material.icons.extended)
         }
         commonTest.dependencies {
             implementation(libs.kotest.framework.engine)

@@ -1,7 +1,8 @@
 // =============================================================================
-//  TASK_TREE_ITEMS.KT
-//  TaskRow composable: nesting strips, cursor highlight, date labels,
-//  TaskState display, Category rules. No checkbox — tap title to edit.
+//  TASK_ROWS.KT
+//  Row composables: TaskRow (nesting strips, cursor highlight, date labels,
+//  TaskState display, Category rules), EditingTaskRow, TodayBar, InputTaskRow.
+//  No checkbox — tap title to edit.
 // =============================================================================
 
 package com.example.todo_tree.ui
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.Search
 import com.example.todo_tree.LocalDarkMode
 import com.example.todo_tree.currentTimeMillis
 import com.example.todo_tree.isDesktop
+import com.example.todo_tree.model.DAY_MS
 import com.example.todo_tree.model.doDate
 import com.example.todo_tree.model.dueDate
 import com.example.todo_tree.model.isCategory
@@ -234,7 +236,7 @@ fun EditingTaskRow(
 @Composable
 fun TodayBar(onSearchClick: () -> Unit = {}, onThemeToggle: () -> Unit = {}) {
     val now = currentTimeMillis()
-    val todayDays = now / 86_400_000L
+    val todayDays = now / DAY_MS
     val dayNames = arrayOf("Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed")
     val weekday = dayNames[(todayDays % 7).toInt()]
     Row(

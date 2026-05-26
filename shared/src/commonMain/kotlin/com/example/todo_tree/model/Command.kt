@@ -51,9 +51,9 @@ data class AddSubtask(
 
 data class RemoveTask(val taskId: String) : Command() {
     override fun apply(forest: List<ItemNode>): ApplyResult {
-        val (parentId, index, node) = TaskTree.captureLocation(forest, taskId)
+        val loc = TaskTree.captureLocation(forest, taskId)
         val newForest = TaskTree.removeTask(forest, taskId)
-        return ApplyResult(newForest, InsertTask(parentId, index, node))
+        return ApplyResult(newForest, InsertTask(loc.parentId, loc.index, loc.node))
     }
 }
 
@@ -150,39 +150,11 @@ data class Outdent(val taskId: String) : Command() {
     }
 }
 
-// ==== Root-level operations ====
-
-data class AddRootTask(
-    val title: String,
-    val item: Item,
-) : Command() {
-    override fun apply(forest: List<ItemNode>): ApplyResult {
-        val node = ItemNode(title = title.trim(), item = item)
-        return ApplyResult(forest + node, RemoveRootTask(node.id), newNodeId = node.id)
-    }
-}
-
-data class RemoveRootTask(val taskId: String) : Command() {
-    override fun apply(forest: List<ItemNode>): ApplyResult {
-        val idx = forest.indexOfFirst { it.id == taskId }
-        require(idx >= 0) { "Root task $taskId not found" }
-        val node = forest[idx]
-        val newForest = forest.toMutableList().apply { removeAt(idx) }
-        return ApplyResult(newForest, InsertRootTask(idx, node))
-    }
-}
-
-data class InsertRootTask(
-    val index: Int,
-    val node: ItemNode,
-) : Command() {
-    override fun apply(forest: List<ItemNode>): ApplyResult {
-        val newForest = forest.toMutableList().apply {
-            add(index.coerceIn(0..size), node)
-        }
-        return ApplyResult(newForest, RemoveRootTask(node.id))
-    }
-}
+// Root-level operations (AddRootTask / RemoveRootTask / InsertTask) were removed.
+// The ghost root (__ghost_root__) now wraps the entire forest, so all nodes have
+// a parent. Root-level commands became dead code — add, remove, move, and reorder
+// all go through the single AddSubtask / RemoveTask / InsertTask path under the
+// ghost root.
 
 // ==== Batch deletion ====
 

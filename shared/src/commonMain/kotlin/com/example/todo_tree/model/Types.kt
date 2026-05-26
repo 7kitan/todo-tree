@@ -1,7 +1,8 @@
 // =============================================================================
-//  ITEM_NODE.KT
-//  Core data types: Item (sealed Task/Project/Category), TaskState, and
-//  ItemNode (tree node with immutable structural sharing).
+//  TYPES.KT
+//  Core data types: Item (sealed Task/Project/Category), TaskState,
+//  ItemNode (tree node with immutable structural sharing), and domain
+//  constants (GHOST_ROOT, INBOX_ID, DAY_MS).
 //
 //  Persistence decision: @Serializable enables kotlinx-serialization-json
 //  for full-tree save/load. UUID IDs are used instead of counter-based IDs
@@ -14,6 +15,18 @@ package com.example.todo_tree.model
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.serialization.Serializable
+
+// ==== Domain constants ====
+
+// Ghost root: single synthetic root node that replaces a flat forest list.
+// Previously, the forest was a list of independent root nodes, which required
+// special-case handling everywhere (captureLocation, moveUp/down, indent/outdent,
+// and separate AddRootTask/RemoveRootTask/InsertRootTask commands).
+// Now every node has a parent — the ghost root — unifying all tree operations
+// (add, remove, move, reorder) under a single code path.
+const val GHOST_ROOT = "__ghost_root__"
+const val INBOX_ID = "__inbox__"
+const val DAY_MS = 86_400_000L
 
 @Serializable
 sealed class TaskState {
@@ -60,5 +73,3 @@ val ItemNode.dueDate: Long? get() = when (val i = item) {
 val ItemNode.doDate: Long? get() = (item as? Item.Task)?.doDate
 
 val ItemNode.isCategory: Boolean get() = item is Item.Category
-
-const val GHOST_ROOT = "__ghost_root__"

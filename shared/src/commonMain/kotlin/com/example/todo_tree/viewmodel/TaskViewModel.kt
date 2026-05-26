@@ -19,6 +19,11 @@ package com.example.todo_tree.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.todo_tree.currentTimeMillis
+import com.example.todo_tree.model.DAY_MS
+import com.example.todo_tree.model.GHOST_ROOT
+import com.example.todo_tree.model.INBOX_ID
+import com.example.todo_tree.model.Item
+import com.example.todo_tree.model.ItemNode
 import com.example.todo_tree.model.*
 import com.example.todo_tree.persistence.PlatformStorage
 import kotlinx.coroutines.FlowPreview
@@ -45,7 +50,6 @@ class TaskViewModel : ViewModel() {
     val canRedo: StateFlow<Boolean> = _canRedo.asStateFlow()
 
     private val undoManager = UndoManager()
-    private val __inbox__ = "__inbox__"
 
     init {
         // Auto-save forest on every mutation, debounced to 500ms
@@ -94,48 +98,45 @@ class TaskViewModel : ViewModel() {
 
     // ==== Public mutations (all go through commands) ====
 
-    fun addRootTask(title: String, item: Item = Item.Task()): String? =
-        execWithId(AddRootTask(title.trim(), item), title)
-
     fun addSubtask(parentId: String, title: String, item: Item = Item.Task()): String? =
         execWithId(AddSubtask(parentId, title.trim(), item), title)
 
     fun addInboxChild(title: String, item: Item = Item.Task()): String? =
-        addSubtask(__inbox__, title, item)
+        addSubtask(INBOX_ID, title, item)
 
     fun removeTask(taskId: String) {
-        if (taskId == __inbox__) return; exec(RemoveTask(taskId))
+        if (taskId == INBOX_ID) return; exec(RemoveTask(taskId))
     }
 
     fun toggleCompleted(taskId: String) {
-        if (taskId == __inbox__) return; exec(ToggleCompleted(taskId))
+        if (taskId == INBOX_ID) return; exec(ToggleCompleted(taskId))
     }
 
     fun updateTask(taskId: String, title: String, item: Item) {
-        if (taskId == __inbox__) return; exec(UpdateTask(taskId, title.trim(), item))
+        if (taskId == INBOX_ID) return; exec(UpdateTask(taskId, title.trim(), item))
     }
 
     fun deleteCompleted() { exec(DeleteCompleted) }
 
     fun moveUp(taskId: String) {
-        if (taskId == __inbox__) return; exec(MoveUp(taskId))
+        if (taskId == INBOX_ID) return; exec(MoveUp(taskId))
     }
 
     fun moveDown(taskId: String) {
-        if (taskId == __inbox__) return; exec(MoveDown(taskId))
+        if (taskId == INBOX_ID) return; exec(MoveDown(taskId))
     }
 
     fun moveTo(taskId: String, newParentId: String) {
-        if (taskId == __inbox__ || newParentId == __inbox__) return
+        if (taskId == INBOX_ID || newParentId == INBOX_ID) return
         exec(MoveTask(taskId, newParentId))
     }
 
     fun indent(taskId: String) {
-        if (taskId == __inbox__) return; exec(Indent(taskId))
+        if (taskId == INBOX_ID) return; exec(Indent(taskId))
     }
 
     fun outdent(taskId: String) {
-        if (taskId == __inbox__) return; exec(Outdent(taskId))
+        if (taskId == INBOX_ID) return; exec(Outdent(taskId))
     }
 
     fun undo() {
@@ -155,11 +156,11 @@ class TaskViewModel : ViewModel() {
 
 // ==== Sample data ====
 
-private val epochDay: Long get() = currentTimeMillis() / 86_400_000L
+    private val epochDay: Long get() = currentTimeMillis() / DAY_MS
 
-private fun sampleForest(): List<ItemNode> {
-    val today = epochDay * 86_400_000L
-    fun d(n: Int) = today + n * 86_400_000L
+    fun sampleForest(): List<ItemNode> {
+        val today = epochDay * DAY_MS
+        fun d(n: Int) = today + n * DAY_MS
 
     val t = 0; val tmw = 1; val p2 = -2; val d3 = 3; val d5 = 5; val d7 = 7; val d10 = 10; val d14 = 14; val d30 = 30
 
@@ -182,7 +183,7 @@ private fun sampleForest(): List<ItemNode> {
 
     return listOf(
         ItemNode(id = GHOST_ROOT, title = "", item = Item.Category, children = listOf(
-            category("__inbox__", "Inbox", listOf(
+            category(INBOX_ID, "Inbox", listOf(
                 task("Pay electricity bill", p2),
                 task("Buy groceries", t),
                 taskDo("Schedule dentist", tmw),
