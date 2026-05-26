@@ -116,13 +116,27 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
     var vpH by remember { mutableFloatStateOf(0f) }
     val scrollAnim = remember { Animatable(0f) }
 
+    // Track nodes whose auto-collapse timer is running; non-empty set starts the 3s countdown.
     var pendingRemovals by remember { mutableStateOf(setOf<String>()) }
+    // Incremented on each wheel-powered cursor move; used to detect scroll idle via debounce.
+    var wheelScrollVersion by remember { mutableStateOf(0) }
+    // False while wheel scrolling is active; true after 400ms of no wheel events.
+    var wheelIdle by remember { mutableStateOf(true) }
+    var dragOffset by remember { mutableStateOf(0f) }
+    var scrollAcc by remember { mutableFloatStateOf(0f) }
+    var dragStartY by remember { mutableFloatStateOf(0f) }
+    val scope = rememberCoroutineScope()
+    var isDragging by remember { mutableStateOf(false) }
+    val thr = rowH * 1.0f   // Scroll threshold for drag — 1:1 cursor-to-finger movement.
+    val scrollThr = rowH * 0.4f  // Scroll wheel threshold.
 
     // ==== Deferred collapse ====
+    // After 3s of idle (no drag, no wheel), collapse all non-ancestor subtrees
+    // and snap the scroll to keep the cursor anchor visible.
 
-    LaunchedEffect(pendingRemovals) {
-        if (pendingRemovals.isEmpty()) return@LaunchedEffect
-        delay(1000)
+    LaunchedEffect(pendingRemovals, isDragging, wheelIdle) {
+        if (pendingRemovals.isEmpty() || isDragging || !wheelIdle) return@LaunchedEffect
+        delay(3000)
         val anchor = visibleOrder.getOrNull(cursorIndex)?.id
         expanded = expanded - pendingRemovals
         pendingRemovals = emptySet()
@@ -134,6 +148,19 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
                 cursorIndex = idx
             }
         }
+    }
+
+    // ==== Wheel idle debounce ====
+    // Each wheel cursor move starts a 400ms countdown. If no new wheel event
+    // arrives before it fires, mark wheel as idle and clear stale pending removals
+    // so auto-expand re-evaluates from the final cursor position.
+
+    LaunchedEffect(wheelScrollVersion) {
+        if (wheelScrollVersion == 0) return@LaunchedEffect
+        wheelIdle = false
+        delay(400)
+        wheelIdle = true
+        pendingRemovals = emptySet()
     }
 
     // ==== Reset swipe/edit on cursor change ====
@@ -154,30 +181,25 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
     fun moveLeft() { cursorId?.let { id -> getSiblings(forest, id).let { s -> val i = s.indexOfFirst { it.id == id }; if (i > 0) visibleOrder.indexOfFirst { it.id == s[i - 1].id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } }
     fun moveRight() { cursorId?.let { id -> getSiblings(forest, id).let { s -> val i = s.indexOfFirst { it.id == id }; if (i >= 0 && i < s.size - 1) visibleOrder.indexOfFirst { it.id == s[i + 1].id }.takeIf { it >= 0 }?.let { cursorIndex = it } } } }
 
-    // ==== Gesture thresholds ====
-
-    var dragOffset by remember { mutableStateOf(0f) }
-    var scrollAcc by remember { mutableFloatStateOf(0f) }
-    var dragStartY by remember { mutableFloatStateOf(0f) }
-    val scope = rememberCoroutineScope()
-    var isDragging by remember { mutableStateOf(false) }
-    val thr = rowH * 1.0f
-    val scrollThr = rowH * 0.4f
-
     // ==== Auto-scroll & auto-expand ====
+    // On cursor move: scroll to center, expand the cursor node if collapsed,
+    // then schedule non-ancestor subtrees for deferred collapse. Set-replace
+    // ensures navigating back to a queued node drops it from pendingRemovals,
+    // cancelling its collapse and resetting the timer.
 
-    LaunchedEffect(cursorIndex, vpH, isDragging) {
-        if (vpH <= 0f || pendingRemovals.isNotEmpty() || isDragging) return@LaunchedEffect
+    LaunchedEffect(cursorIndex, vpH, isDragging, wheelIdle) {
+        if (vpH <= 0f || isDragging) return@LaunchedEffect
         scrollAnim.animateTo(cursorIndex * rowH + padPx + rowH / 2f - vpH * 0.5f, tween(200))
         delay(100)
         val id = cursorId ?: return@LaunchedEffect; val node = findTaskById(forest, id) ?: return@LaunchedEffect
         if (node.children.isNotEmpty() && node.id !in expanded) expanded = expanded + node.id
+        // Keep only nodes that are ancestors of the cursor (including the cursor node itself).
         val ne = expanded.filter { eid ->
             if (eid == id) return@filter true
             var cur = id; while (true) { if (cur == eid) break; val p = findParent(forest, cur) ?: break; cur = p.id }; cur == eid
         }
         if (ne.size < expanded.size) {
-            pendingRemovals = pendingRemovals + (expanded - ne.toSet())
+            pendingRemovals = expanded - ne.toSet()  // Set-replace: full diff, not additive.
         }
     }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
@@ -200,8 +222,8 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
                         { if (cursorId != null) { inputMode = "add"; inputText = TextFieldValue("") } })
                 } else Modifier
             ).clipToBounds().onSizeChanged { vpH = it.height.toFloat() }
-                .pointerInput(visibleOrder.size) { detectDragGestures(onDragStart = { dragStartY = it.y; scope.launch { scrollAnim.snapTo(scrollAnim.value) }; isDragging = true; dragOffset = 0f }, onDragEnd = { if (abs(dragOffset) < thr * 0.5f && dragStartY > screenHeight * 0.75f) swipeResetCounter++; isDragging = false; dragOffset = 0f }, onDragCancel = { isDragging = false; dragOffset = 0f }, onDrag = { ch, da -> ch.consume(); scope.launch { val minScroll = padPx + rowH / 2f - vpH * 0.5f; val maxScroll = (visibleOrder.size - 1).coerceAtLeast(0) * rowH + minScroll; scrollAnim.snapTo((scrollAnim.value - da.y).coerceIn(minScroll, maxScroll)) }; dragOffset += da.y; if (abs(dragOffset) > thr) { if (dragOffset > thr) { moveUp(); dragOffset -= thr }; if (dragOffset < -thr) { moveDown(); dragOffset += thr } } }) }
-                .pointerInput(visibleOrder.size) { awaitPointerEventScope { while (true) { val e = awaitPointerEvent(); val s = e.changes.firstOrNull()?.scrollDelta ?: continue; scrollAcc += s.y; if (scrollAcc > scrollThr) { moveDown(); scrollAcc = 0f }; if (scrollAcc < -scrollThr) { moveUp(); scrollAcc = 0f } } } }) {
+                .pointerInput(visibleOrder.size) { detectDragGestures(onDragStart = { dragStartY = it.y; scope.launch { scrollAnim.snapTo(scrollAnim.value) }; isDragging = true; dragOffset = 0f; pendingRemovals = emptySet() }, onDragEnd = { if (abs(dragOffset) < thr * 0.5f && dragStartY > screenHeight * 0.75f) swipeResetCounter++; isDragging = false; dragOffset = 0f }, onDragCancel = { isDragging = false; dragOffset = 0f }, onDrag = { ch, da -> ch.consume(); scope.launch { val minScroll = padPx + rowH / 2f - vpH * 0.5f; val maxScroll = (visibleOrder.size - 1).coerceAtLeast(0) * rowH + minScroll; scrollAnim.snapTo((scrollAnim.value - da.y).coerceIn(minScroll, maxScroll)) }; dragOffset += da.y; if (abs(dragOffset) > thr) { if (dragOffset > thr) { moveUp(); dragOffset -= thr }; if (dragOffset < -thr) { moveDown(); dragOffset += thr } } }) }
+                .pointerInput(visibleOrder.size) { awaitPointerEventScope { while (true) { val e = awaitPointerEvent(); val s = e.changes.firstOrNull()?.scrollDelta ?: continue; scrollAcc += s.y; if (scrollAcc > scrollThr) { moveDown(); wheelScrollVersion++; scrollAcc = 0f }; if (scrollAcc < -scrollThr) { moveUp(); wheelScrollVersion++; scrollAcc = 0f } } } }) {
                 if (visibleOrder.isEmpty()) {
                     Text("No tasks", Modifier.padding(horizontal = 16.dp, vertical = 40.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else Column(Modifier.fillMaxWidth().wrapContentHeight().offset { IntOffset(0, -scrollAnim.value.roundToInt()) }
