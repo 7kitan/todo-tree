@@ -33,7 +33,7 @@ class UndoManagerPropertyTest : FunSpec({
             mgr.canUndo shouldBe false
             mgr.canRedo shouldBe false
 
-            mgr.execute(RemoveRootTask(ids.first()), forest)
+            mgr.execute(RemoveTask(ids.first()), forest)
             mgr.canUndo shouldBe true
             mgr.canRedo shouldBe false
         }
@@ -46,7 +46,7 @@ class UndoManagerPropertyTest : FunSpec({
             val mgr = UndoManager()
 
             val afterExec = mgr.execute(
-                AddRootTask("undo_test", Item.Task()), forest
+                UpdateTask(ids.first(), "undo_test", Item.Task()), forest
             )
             val afterUndo = mgr.undo(afterExec.forest)
             afterUndo.shouldNotBeNull()
@@ -61,7 +61,7 @@ class UndoManagerPropertyTest : FunSpec({
             val mgr = UndoManager()
 
             val afterExec = mgr.execute(
-                AddRootTask("redo_test", Item.Task()), forest
+                UpdateTask(ids.first(), "redo_test", Item.Task()), forest
             )
             mgr.undo(afterExec.forest)
             val afterRedo = mgr.redo(forest)
@@ -86,11 +86,11 @@ class UndoManagerPropertyTest : FunSpec({
             if (ids.size < 2) return@checkAll
             val mgr = UndoManager()
 
-            val afterExec = mgr.execute(AddRootTask("first", Item.Task()), forest)
+            val afterExec = mgr.execute(UpdateTask(ids.first(), "first", Item.Task()), forest)
             val afterUndo = mgr.undo(afterExec.forest)
             afterUndo.shouldNotBeNull()
 
-            mgr.execute(AddRootTask("second", Item.Task()), afterUndo.forest)
+            mgr.execute(UpdateTask(ids.first(), "second", Item.Task()), afterUndo.forest)
             mgr.canRedo shouldBe false
         }
     }
@@ -99,20 +99,17 @@ class UndoManagerPropertyTest : FunSpec({
         val mgr = UndoManager(maxSize = 3)
         var forest = emptyList<ItemNode>()
 
-        // Execute 4 commands in sequence without undoing
-        forest = mgr.execute(AddRootTask("a", Item.Task()), forest).forest
-        forest = mgr.execute(AddRootTask("b", Item.Task()), forest).forest
-        forest = mgr.execute(AddRootTask("c", Item.Task()), forest).forest
-        forest = mgr.execute(AddRootTask("d", Item.Task()), forest).forest
+        // Execute 4 DeleteCompleted commands (works on empty forest, pushes inverse)
+        repeat(4) { forest = mgr.execute(DeleteCompleted, forest).forest }
 
-        // Undo 3 times — should get d, c, b undone
+        // Undo 3 times — should get last 3 undone
         val u1 = mgr.undo(forest)
         u1.shouldNotBeNull()
         val u2 = mgr.undo(u1.forest)
         u2.shouldNotBeNull()
         val u3 = mgr.undo(u2.forest)
         u3.shouldNotBeNull()
-        // a should have been dropped — 4th undo returns null
+        // First was dropped by maxSize cap — 4th undo returns null
         val u4 = mgr.undo(u3.forest)
         u4.shouldBeNull()
     }

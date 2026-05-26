@@ -111,25 +111,6 @@ class CommandPropertyTest : FunSpec({
         }
     }
 
-    test("AddRootTask → RemoveRootTask roundtrip") {
-        checkAll(arbForest()) { forest ->
-            val cmd = AddRootTask("root_test", Item.Task())
-            val r1 = cmd.apply(forest)
-            val r2 = r1.inverse.apply(r1.forest)
-            r2.forest shouldBe forest
-        }
-    }
-
-    test("RemoveRootTask → InsertRootTask roundtrip") {
-        checkAll(arbForest(1, 5)) { forest ->
-            val rootId = forest.firstOrNull()?.id ?: return@checkAll
-            val cmd = RemoveRootTask(rootId)
-            val r1 = cmd.apply(forest)
-            val r2 = r1.inverse.apply(r1.forest)
-            r2.forest shouldBe forest
-        }
-    }
-
     test("DeleteCompleted → RestoreForest roundtrip") {
         checkAll(arbForest()) { forest ->
             val r1 = DeleteCompleted.apply(forest)
