@@ -79,63 +79,9 @@ private val months = mapOf(
     "december" to 12, "dec" to 12,
 )
 
-private val monthDays = intArrayOf(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
-
 // ==== Calendar math ====
-
-private fun isLeapYear(y: Long) = (y % 4L == 0L && y % 100L != 0L) || (y % 400L == 0L)
-
-// Break epoch days into (year, month, day)
-private fun epochToYmd(days: Long): Triple<Long, Int, Int> {
-    var y = 1970L; var r = days
-    while (true) { val d = if (isLeapYear(y)) 366L else 365L; if (r < d) break; r -= d; y++ }
-    val md = if (isLeapYear(y)) intArrayOf(31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31) else monthDays
-    var m = 1; for (dm in md) { if (r < dm) break; r -= dm; m++ }
-    return Triple(y, m, (r + 1).toInt())
-}
-
-private fun ymdToEpochDays(year: Long, month: Int, day: Int): Long {
-    var total = 0L
-    for (y in 1970L until year) total += if (isLeapYear(y)) 366L else 365L
-    val md = if (isLeapYear(year)) intArrayOf(31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31) else monthDays
-    for (m in 0 until month - 1) total += md[m]
-    return total + day - 1
-}
-
-private fun nextDayMonth(day: Int, month: Int, todayStart: Long): Long? {
-    if (day < 1 || day > 31 || month < 1 || month > 12) return null
-    val (year, curMonth, curDay) = epochToYmd(epochDays)
-    val maxDay = if (month == 2 && isLeapYear(year)) 29 else monthDays[month - 1]
-    if (day > maxDay) return null
-    if (month > curMonth || (month == curMonth && day >= curDay)) {
-        return ymdToEpochDays(year, month, day) * DAY_MS
-    }
-    val nextMax = if (month == 2 && isLeapYear(year + 1)) 29 else monthDays[month - 1]
-    if (day > nextMax) return null
-    return ymdToEpochDays(year + 1, month, day) * DAY_MS
-}
-
-// Find the next occurrence of a given day, searching forward month by month.
-private fun nextDay(day: Int, todayStart: Long): Long? {
-    if (day < 1 || day > 31) return null
-    val (year, curMonth, curDay) = epochToYmd(epochDays)
-    // Try current month if day is today or future
-    val curMax = if (curMonth == 2 && isLeapYear(year)) 29 else monthDays[curMonth - 1]
-    if (day <= curMax && day >= curDay) {
-        return ymdToEpochDays(year, curMonth, day) * DAY_MS
-    }
-    // Try remaining months this year
-    for (m in (curMonth + 1)..12) {
-        val max = if (m == 2 && isLeapYear(year)) 29 else monthDays[m - 1]
-        if (day <= max) return ymdToEpochDays(year, m, day) * DAY_MS
-    }
-    // Try next year
-    for (m in 1..12) {
-        val max = if (m == 2 && isLeapYear(year + 1)) 29 else monthDays[m - 1]
-        if (day <= max) return ymdToEpochDays(year + 1, m, day) * DAY_MS
-    }
-    return null
-}
+// Shared implementations in DateHelpers.kt (isLeapYear, daysInMonth,
+// epochDaysToYmd, ymdToEpochDays, nextDayMonth, nextDay).
 
 // ==== Date expression parsing ====
 
@@ -196,7 +142,8 @@ private fun parseDateExpression(expr: String, todayStart: Long): Long? {
     if (ordMatch != null) {
         val day = ordMatch.groupValues[1].toIntOrNull()
         if (day != null && day in 1..31) {
-            val (_, curMonth, curDay) = epochToYmd(epochDays)
+            val nowDays = currentTimeMillis() / DAY_MS
+            val (_, curMonth, curDay) = epochDaysToYmd(nowDays)
             return nextDayMonth(day, curMonth, todayStart)
         }
     }
@@ -205,11 +152,12 @@ private fun parseDateExpression(expr: String, todayStart: Long): Long? {
     if (nextOrd != null) {
         val day = nextOrd.groupValues[1].toIntOrNull()
         if (day != null && day in 1..31) {
-            val (_, curMonth, _) = epochToYmd(epochDays)
+            val nowDays = currentTimeMillis() / DAY_MS
+            val (_, curMonth, _) = epochDaysToYmd(nowDays)
             val nextMonth = if (curMonth == 12) 1 else curMonth + 1
-            val nextYear = if (curMonth == 12) epochToYmd(epochDays).first + 1 else epochToYmd(epochDays).first
-            val maxDay = if (nextMonth == 2 && isLeapYear(nextYear)) 29 else monthDays[nextMonth - 1]
-            if (day <= maxDay) return ymdToEpochDays(nextYear, nextMonth, day) * DAY_MS
+            val ymd = epochDaysToYmd(nowDays)
+            val nextYear = if (curMonth == 12) ymd.year + 1 else ymd.year
+            if (day <= daysInMonth(nextYear, nextMonth)) return ymdToEpochDays(nextYear, nextMonth, day) * DAY_MS
         }
     }
 
