@@ -14,6 +14,7 @@ import androidx.compose.ui.input.key.type
 import com.example.todo_tree.model.GHOST_ROOT
 import com.example.todo_tree.model.Item
 import com.example.todo_tree.model.ItemNode
+import com.example.todo_tree.model.MAX_FUZZY_RESULTS
 import com.example.todo_tree.model.dueDate
 
 data class VisibleItem(val id: String, val depth: Int)
@@ -119,7 +120,7 @@ fun findTaskByTitle(forest: List<ItemNode>, title: String): ItemNode? {
     return null
 }
 
-fun findTasksByTitleFuzzy(forest: List<ItemNode>, query: String, maxResults: Int = 5): List<ItemNode> {
+fun findTasksByTitleFuzzy(forest: List<ItemNode>, query: String, maxResults: Int = MAX_FUZZY_RESULTS): List<ItemNode> {
     val q = query.trim().lowercase()
     val result = mutableListOf<ItemNode>()
     fun walk(nodes: List<ItemNode>) {

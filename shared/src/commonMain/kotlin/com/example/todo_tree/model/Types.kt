@@ -27,6 +27,8 @@ import kotlinx.serialization.Serializable
 const val GHOST_ROOT = "__ghost_root__"
 const val INBOX_ID = "__inbox__"
 const val DAY_MS = 86_400_000L
+const val ROW_HEIGHT_DP = 40
+const val MAX_FUZZY_RESULTS = 5
 
 @Serializable
 sealed class TaskState {

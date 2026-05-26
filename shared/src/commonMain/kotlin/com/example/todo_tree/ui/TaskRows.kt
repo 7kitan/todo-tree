@@ -28,6 +28,7 @@ import com.example.todo_tree.LocalDarkMode
 import com.example.todo_tree.currentTimeMillis
 import com.example.todo_tree.isDesktop
 import com.example.todo_tree.model.DAY_MS
+import com.example.todo_tree.model.ROW_HEIGHT_DP
 import com.example.todo_tree.model.doDate
 import com.example.todo_tree.model.dueDate
 import com.example.todo_tree.model.isCategory
@@ -87,7 +88,7 @@ fun TaskRow(node: ItemNode, strips: List<Color>, hasChildren: Boolean, isExpande
 
     val darkMode = LocalDarkMode.current
     Row(
-        modifier = Modifier.fillMaxWidth().height(40.dp).graphicsLayer { this.alpha = alpha }
+        modifier = Modifier.fillMaxWidth().height(ROW_HEIGHT_DP.dp).graphicsLayer { this.alpha = alpha }
                 .then(if (isCursor) Modifier.border(1.dp, MaterialTheme.colorScheme.primary) else Modifier)
             .background(if (isCursor && darkMode.value) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent),
         verticalAlignment = Alignment.CenterVertically,
@@ -163,7 +164,7 @@ fun EditingTaskRow(
 
     Column {
         Row(
-            modifier = Modifier.fillMaxWidth().height(40.dp),
+            modifier = Modifier.fillMaxWidth().height(ROW_HEIGHT_DP.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             strips.forEach { color -> Box(Modifier.width(4.dp).fillMaxHeight().background(color)) }
@@ -240,7 +241,7 @@ fun TodayBar(onSearchClick: () -> Unit = {}, onThemeToggle: () -> Unit = {}) {
     val dayNames = arrayOf("Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed")
     val weekday = dayNames[(todayDays % 7).toInt()]
     Row(
-        modifier = Modifier.fillMaxWidth().height(40.dp).clickable(onClick = onSearchClick),
+        modifier = Modifier.fillMaxWidth().height(ROW_HEIGHT_DP.dp).clickable(onClick = onSearchClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(4.dp).fillMaxHeight().background(stripPalette[0]))
@@ -271,12 +272,12 @@ fun InputTaskRow(
     onDone: () -> Unit,
     onClose: () -> Unit,
     depth: Int,
-    mode: String,
+    mode: InputMode?,
     visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
     val strips = (0..depth).map { stripPalette[it % stripPalette.size] }
     Row(
-        modifier = Modifier.fillMaxWidth().height(40.dp),
+        modifier = Modifier.fillMaxWidth().height(ROW_HEIGHT_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         strips.forEach { color -> Box(Modifier.width(4.dp).fillMaxHeight().background(color)) }
@@ -297,10 +298,8 @@ fun InputTaskRow(
             textStyle = MaterialTheme.typography.bodyMedium,
             decorationBox = { inner ->
                 if (text.text.isEmpty()) Text(
-                    when (mode) {
-                        "search" -> "Search tasks\u2026"
-                        else -> "Add / command\u2026"
-                    },
+                    if (mode is InputMode.Search) "Search tasks\u2026"
+                    else "Add / command\u2026",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -310,13 +309,13 @@ fun InputTaskRow(
         Spacer(Modifier.width(4.dp))
         Box(Modifier.size(28.dp).clickable(onClick = onDone), contentAlignment = Alignment.Center) {
             Icon(
-                if (mode == "search") Icons.Filled.Search else Icons.Filled.Add,
+                if (mode is InputMode.Search) Icons.Filled.Search else Icons.Filled.Add,
                 "Submit",
                 tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(20.dp),
             )
         }
-        if (mode != "search") {
+        if (mode !is InputMode.Search) {
             Spacer(Modifier.width(4.dp))
             var showHelp by remember { mutableStateOf(false) }
             Box {

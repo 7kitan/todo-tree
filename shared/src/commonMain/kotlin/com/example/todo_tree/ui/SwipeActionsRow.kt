@@ -23,12 +23,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.example.todo_tree.model.ROW_HEIGHT_DP
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private val actionWidth = 80.dp
-private val rowHeight = 40.dp
 private const val snapDuration = 200
 
 @Composable
@@ -71,7 +71,7 @@ fun SwipeActionsRow(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(rowHeight)
+                .height(ROW_HEIGHT_DP.dp)
                 .background(MaterialTheme.colorScheme.surface)
                 .pointerInput(actionPx) {
                     awaitPointerEventScope {
@@ -121,7 +121,7 @@ fun SwipeActionsRow(
         Box(
             modifier = Modifier
                 .width(actionWidth)
-                .height(rowHeight)
+                .height(ROW_HEIGHT_DP.dp)
                 .offset { IntOffset(deleteX.roundToInt(), 0) }
                 .background(Color(0xFFE53935))
                 .clickable(
@@ -138,7 +138,7 @@ fun SwipeActionsRow(
         Box(
             modifier = Modifier
                 .width(actionWidth)
-                .height(rowHeight)
+                .height(ROW_HEIGHT_DP.dp)
                 .offset { IntOffset(doneX.roundToInt(), 0) }
                 .background(Color(0xFF43A047))
                 .clickable(
@@ -155,7 +155,7 @@ fun SwipeActionsRow(
         Box(
             modifier = Modifier
                 .width(actionWidth)
-                .height(rowHeight)
+                .height(ROW_HEIGHT_DP.dp)
                 .offset { IntOffset(waitX.roundToInt(), 0) }
                 .background(Color(0xFFF9A825))
                 .clickable(

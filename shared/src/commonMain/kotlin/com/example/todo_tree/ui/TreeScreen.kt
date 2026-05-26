@@ -39,6 +39,8 @@ import com.example.todo_tree.model.GHOST_ROOT
 import com.example.todo_tree.model.INBOX_ID
 import com.example.todo_tree.model.Item
 import com.example.todo_tree.model.ItemNode
+import com.example.todo_tree.model.MAX_FUZZY_RESULTS
+import com.example.todo_tree.model.ROW_HEIGHT_DP
 import com.example.todo_tree.model.TaskState
 import com.example.todo_tree.isDesktop
 import com.example.todo_tree.model.doDate
@@ -118,7 +120,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
 
     // ==== Scroll & animation constants ====
 
-    val rowH = with(LocalDensity.current) { 40.dp.toPx() }
+    val rowH = with(LocalDensity.current) { ROW_HEIGHT_DP.dp.toPx() }
     val padPx = with(LocalDensity.current) { 8.dp.toPx() }
     var vpH by remember { mutableFloatStateOf(0f) }
     val scrollAnim = remember { Animatable(0f) }
@@ -241,7 +243,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
                     .padding(top = 8.dp, bottom = 8.dp)) {
                     visibleOrder.forEachIndexed { i, item ->
                         if (item.id == GHOST_ROOT) {
-                            Box(Modifier.fillMaxWidth().height(40.dp), contentAlignment = Alignment.Center) {
+                            Box(Modifier.fillMaxWidth().height(ROW_HEIGHT_DP.dp), contentAlignment = Alignment.Center) {
                                 Text("···",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
@@ -395,8 +397,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
                         },
                         onClose = { inputMode = null; inputText = TextFieldValue("") },
                         depth = if (cursorId != null) (visibleOrder.find { it.id == cursorId }?.depth ?: 0) + 1 else 0,
-                        mode = if (inputMode is InputMode.Search) "search"
-                            else if (cursorId != null) "addSubtask" else "addRoot",
+                        mode = inputMode,
                     )
                 } else {
                     TodayBar(onSearchClick = { inputMode = InputMode.Search; inputText = TextFieldValue("") }, onThemeToggle = onThemeToggle)
@@ -408,7 +409,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
                     val cmd = parseTaskInput(inputText.text)
                     val q = (cmd as? InputCommand.RemoveCategory)?.title
                     if (q.isNullOrBlank()) emptyList()
-                    else findTasksByTitleFuzzy(forest, q, 5).filter { it.item is Item.Category && it.id != INBOX_ID }
+                    else findTasksByTitleFuzzy(forest, q, MAX_FUZZY_RESULTS).filter { it.item is Item.Category && it.id != INBOX_ID }
                 }
                 if (catMatches.isNotEmpty()) {
                     Surface(
@@ -454,7 +455,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
                     fun collect(nodes: List<ItemNode>) { for (n in nodes) { descendants.add(n.id); collect(n.children) } }
                     findTaskById(forest, cursorId)?.let { collect(it.children) }
                     descendants.add(cursorId)
-                    findTasksByTitleFuzzy(forest, q, 5).filter { it.id !in descendants }
+                    findTasksByTitleFuzzy(forest, q, MAX_FUZZY_RESULTS).filter { it.id !in descendants }
                 }
                 if (moveMatches.isNotEmpty()) {
                     Surface(
@@ -496,7 +497,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
                 }
                 val refMatches = remember(inputText.text, forest) {
                     val t = refToken ?: return@remember emptyList()
-                    findTasksByTitleFuzzy(forest, t, 5)
+                    findTasksByTitleFuzzy(forest, t, MAX_FUZZY_RESULTS)
                 }
                 if (refMatches.isNotEmpty()) {
                     Surface(
