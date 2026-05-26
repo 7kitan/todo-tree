@@ -55,7 +55,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
     // ==== State ====
 
     val forest by viewModel.forest.collectAsState()
-    var expanded by remember { mutableStateOf(setOf("__inbox__")) }
+    var expanded by remember { mutableStateOf(emptySet<String>()) }
     var inputMode by remember { mutableStateOf<String?>(null) } // "add" | "search" | null
     var inputText by remember { mutableStateOf(TextFieldValue("")) }
     val effectiveQuery = remember(inputMode, inputText.text) { if (inputMode == "search") inputText.text else "" }
@@ -193,7 +193,7 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
     LaunchedEffect(cursorIndex, vpH, isDragging, wheelIdle) {
         if (vpH <= 0f || isDragging) return@LaunchedEffect
         scrollAnim.animateTo(cursorIndex * rowH + padPx + rowH / 2f - vpH * 0.5f, tween(200))
-        val id = cursorId ?: return@LaunchedEffect; if (id == GHOST_ROOT) return@LaunchedEffect
+        val id = cursorId ?: return@LaunchedEffect
         if (!hasScrolledOnce) { hasScrolledOnce = true; return@LaunchedEffect }
         delay(100)
         val node = findTaskById(forest, id) ?: return@LaunchedEffect
@@ -236,8 +236,9 @@ fun TaskTreeScreen(viewModel: TaskViewModel, modifier: Modifier = Modifier, onTh
                     visibleOrder.forEachIndexed { i, item ->
                         if (item.id == GHOST_ROOT) {
                             Box(Modifier.fillMaxWidth().height(40.dp), contentAlignment = Alignment.Center) {
-                                Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp)
-                                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)))
+                                Text("···",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
                             }
                             return@forEachIndexed
                         }
