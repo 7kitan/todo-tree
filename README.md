@@ -1,6 +1,6 @@
 # todo-tree
 
-> **AI-generated code notice:** This project was written with the assistance of a large language model (DeepSeek V4 Flash).
+> **AI-generated code notice:** This project was written with the assistance of a large language model (DeepSeek V4 Flash). Free to modify, use at your own risk (although this is just a todo list app)
 
 [![CI](https://img.shields.io/github/actions/workflow/status/7kitan/todo-tree/ci.yml?style=flat-square&branch=main&label=CI)](https://github.com/7kitan/todo-tree/actions)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?style=flat-square&logo=kotlin)](https://kotlinlang.org)
