@@ -16,7 +16,7 @@
 
 Task manager with infinite nested subtrees, keyboard-first navigation, NLP date parsing, `#` command syntax, swipe actions, etc.
 This project was made in half-vibecode condition as a means to experiment with some ideas:
-- Algebraic data modeling using Kotlin which I don't have experience using
+- Algebraic modeling of Tasks and Projects using Kotlin which I don't have experience using
 - CI/CD deployment test builds downloadable to use on my phone directly from GitHub
 - Infinite nested task trees
 - Undo/Redo UI, and quick action UI ergonomics on mobile.
