@@ -14,7 +14,17 @@
   </tr>
 </table>
 
-Task manager with infinite nested subtrees, keyboard-first navigation, NLP date parsing, `#` command syntax, swipe actions, and Inbox-centric organization.
+Task manager with infinite nested subtrees, keyboard-first navigation, NLP date parsing, `#` command syntax, swipe actions, etc.
+This project was made in half-vibecode condition as a means to experiment with some ideas:
+- Algebraic data modeling using Kotlin which I don't have experience using
+- CI/CD deployment test builds downloadable to use on my phone directly from GitHub
+- Infinite nested task trees
+- Undo/Redo UI, and quick action UI ergonomics on mobile.
+- Forcing the clanker to always document dependencies in README (see Dependencies below.)
+- command tags in unified text input as opposed to dropdowns
+- ergonomic pseudo-NLP date inputs (auto infer date as next month, or in 6 days, or next monday etc.)
+
+Used to have a WASM build, but even 13mb is too much, so this is limited to native desktop + android.
 
 ## Design References
 
@@ -34,9 +44,6 @@ Task manager with infinite nested subtrees, keyboard-first navigation, NLP date 
 - **Swipe actions**: Overlay-style buttons (Done, Wait, Delete) on task rows — peek on swipe, tap to confirm
 - **Inline editing**: Tap title to edit task properties (dates, title, item type)
 - **Inbox as default**: Stray tasks and unresolved references default to Inbox (immutable category)
-- **Custom theming**: Primary colors, IBM Plex Mono typography
-- **Record-style FAB**: Large 80dp bottom-center button for adding tasks
-- **Local persistence**: Forest auto-saves to disk/localStorage as pretty-printed JSON with 500ms debounce
 
 ## CI/CD
 
@@ -46,7 +53,7 @@ Task manager with infinite nested subtrees, keyboard-first navigation, NLP date 
 | PR to main | ✅ | ✅ | ❌ |
 | Merge (push to main) | ✅ | ✅ | ✅ |
 
-The debug APK artifact (downloadable from the Actions run) can be side-loaded on any Android device for testing. The Web (WasmJs) build deploys to [GitHub Pages](https://7kitan.github.io/todo-tree/) — the APK is also embedded in the site at [`androidApp-debug.apk`](https://7kitan.github.io/todo-tree/androidApp-debug.apk) for direct mobile download.
+The debug APK artifact is uploaded to [`androidApp-debug.apk`](https://needfish.github.io/todo-tree/androidApp-debug.apk) for direct mobile download.
 
 ## Project Structure
 
@@ -130,7 +137,6 @@ Supported date expressions: `today`, `tomorrow`, `next week`, `mon`–`sun`, `in
 
 - **Desktop**: `./gradlew :desktopApp:run`
 - **Android**: `./gradlew :androidApp:assembleDebug`
-- **Web (Wasm)**: `./gradlew :webApp:wasmJsBrowserDevelopmentRun`
 
 ## Tests
 
@@ -152,4 +158,3 @@ shared/src/commonTest/kotlin/com/example/todo_tree/
 
 - **Desktop (JVM)**: `./gradlew :shared:jvmTest`
 - **Android host**: `./gradlew :shared:testAndroidHostTest`
-- **Web (Wasm)**: `./gradlew :shared:wasmJsTest`
